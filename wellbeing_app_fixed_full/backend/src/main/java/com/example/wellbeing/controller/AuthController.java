@@ -46,7 +46,8 @@ public class AuthController {
                 return ResponseEntity.badRequest().body("❌ Email already in use");
             }
 
-            String role = req.getRole() != null ? req.getRole() : "PATIENT";
+            // Define a role baseada no campo doctor ou usa a role fornecida
+            String role = req.getRole() != null ? req.getRole() : (req.isDoctor() ? "DOCTOR" : "PATIENT");
 
             User user = new User();
             user.setUsername(req.getUsername());
@@ -55,10 +56,20 @@ public class AuthController {
             user.setFullName(req.getFullName());
             user.setRole(role);
 
+            // ✅ SALVAR CAMPOS ESPECÍFICOS SE FOR DOUTOR
+            if ("DOCTOR".equals(role)) {
+                user.setEspecializacao(req.getEspecializacao());
+                user.setCrm(req.getCrm());
+                user.setExperienceYears(req.getExperienceYears());
+                user.setBio(req.getBio());
+                user.setLocation(req.getLocation());
+                // Rating e review_count usam os valores default
+            }
+
             userRepository.save(user);
 
             String token = jwtUtil.generateTokenWithRole(user.getUsername(), role);
-            System.out.println("Registro bem-sucedido: " + req.getUsername());
+            System.out.println("Registro bem-sucedido: " + req.getUsername() + " como " + role);
             
             AuthResponse response = new AuthResponse(token);
             response.setRole(role);
@@ -70,6 +81,7 @@ public class AuthController {
 
         } catch (Exception e) {
             System.out.println("Erro no registro: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.badRequest().body("❌ Registration error: " + e.getMessage());
         }
     }
@@ -108,7 +120,7 @@ public class AuthController {
 
             // ✅ VALIDAÇÃO DA ROLE: Verificar se a role do usuário corresponde à role selecionada
             if (req.getRole() != null && !req.getRole().isEmpty()) {
-                if (!user.getRole().equals(req.getRole())) {
+                if (!user.getRole().equalsIgnoreCase(req.getRole())) {
                     System.out.println("Tentativa de login com role incorreta. Usuário: " + user.getRole() + ", Selecionada: " + req.getRole());
                     return ResponseEntity.status(403).body("❌ Access denied: Invalid role for this user");
                 }

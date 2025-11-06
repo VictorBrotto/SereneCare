@@ -22,7 +22,7 @@ export default function DoctorsList() {
   const fetchDoctors = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:8080/api/doctors", {
+      const res = await axios.get("http://localhost:8080/api/users/doctors", { // ✅ CORRETO
         headers: { Authorization: `Bearer ${token}` }
       });
       setDoctors(res.data);
@@ -36,12 +36,14 @@ export default function DoctorsList() {
   const fetchSpecialties = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:8080/api/doctors/especializacoes", {
+      const res = await axios.get("http://localhost:8080/api/users/doctors/specializations", { // ✅ CORRETO
         headers: { Authorization: `Bearer ${token}` }
       });
       setSpecialties(res.data);
     } catch (err) {
       console.error("Erro ao buscar especialidades", err);
+      // Fallback para especialidades padrão se o endpoint não existir
+      setSpecialties(["Cardiologia", "Dermatologia", "Psiquiatria", "Pediatria", "Ortopedia"]);
     }
   };
 
@@ -235,11 +237,7 @@ export default function DoctorsList() {
                     whileHover={{ rotate: 5, scale: 1.1 }}
                     transition={{ type: "spring", stiffness: 300, damping: 10 }}
                   >
-                    {doctor.profileImage ? (
-                      <img src={doctor.profileImage} alt={doctor.fullName} className="w-full h-full rounded-full object-cover" />
-                    ) : (
-                      doctor.fullName.split(' ').map(n => n[0]).join('')
-                    )}
+                    {doctor.fullName.split(' ').map(n => n[0]).join('')}
                   </motion.div>
                   <div className="flex-1">
                     <motion.h3 

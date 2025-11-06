@@ -20,6 +20,9 @@ export default function Register() {
     fullName: "",
     especializacao: "",
     crm: "",
+    experienceYears: "",
+    bio: "",
+    location: ""
   });
   const [role, setRole] = useState("PATIENT");
   const [error, setError] = useState("");
@@ -50,13 +53,19 @@ export default function Register() {
         password: form.password,
         fullName: form.fullName,
         role: role,
+        // ✅ Campos específicos para DOCTOR
         especializacao: role === "DOCTOR" ? form.especializacao : null,
         crm: role === "DOCTOR" ? form.crm : null,
+        experienceYears: role === "DOCTOR" ? parseInt(form.experienceYears) : null,
+        bio: role === "DOCTOR" ? form.bio : null,
+        location: role === "DOCTOR" ? form.location : null
       };
+      
       await axios.post("http://localhost:8080/api/auth/register", payload);
       navigate("/login");
     } catch (err) {
       setError("❌ Não foi possível criar a conta. Tente novamente.");
+      console.error("Erro no registro:", err);
     }
   };
 
@@ -81,7 +90,7 @@ export default function Register() {
             className="absolute h-7 rounded-full bg-[#6666C4]"
             initial={false}
             animate={{
-              x: role === "PATIENT" ? -50 : 50, // Transição do pílulo
+              x: role === "PATIENT" ? -50 : 50,
             }}
             transition={{
               type: "spring",
@@ -89,7 +98,7 @@ export default function Register() {
               damping: 25,
             }}
             style={{
-              width: "90px", // Largura fixa do pílulo para os dois botões
+              width: "90px",
             }}
           />
           <motion.button
@@ -157,6 +166,7 @@ export default function Register() {
             />
           </div>
 
+          {/* ✅ CAMPOS ESPECÍFICOS PARA DOUTOR */}
           {role === "DOCTOR" && (
             <>
               <label className="block text-[#CFCFE8]">Especialização</label>
@@ -164,14 +174,48 @@ export default function Register() {
                 name="especializacao"
                 value={form.especializacao}
                 onChange={change}
+                required
                 className="w-full px-3 py-2 bg-[#232333] rounded-lg text-[#EAEAFB]"
+                placeholder="Ex: Cardiologia, Dermatologia..."
               />
+              
               <label className="block text-[#CFCFE8]">CRM</label>
               <input
                 name="crm"
                 value={form.crm}
                 onChange={change}
+                required
                 className="w-full px-3 py-2 bg-[#232333] rounded-lg text-[#EAEAFB]"
+                placeholder="Número do CRM"
+              />
+              
+              <label className="block text-[#CFCFE8]">Anos de Experiência</label>
+              <input
+                name="experienceYears"
+                value={form.experienceYears}
+                onChange={change}
+                type="number"
+                className="w-full px-3 py-2 bg-[#232333] rounded-lg text-[#EAEAFB]"
+                placeholder="Ex: 5"
+              />
+              
+              <label className="block text-[#CFCFE8]">Localização</label>
+              <input
+                name="location"
+                value={form.location}
+                onChange={change}
+                className="w-full px-3 py-2 bg-[#232333] rounded-lg text-[#EAEAFB]"
+                placeholder="Ex: São Paulo, SP"
+              />
+              
+              <label className="block text-[#CFCFE8]">Bio/Descrição</label>
+              <textarea
+                name="bio"
+                value={form.bio}
+                onChange={change}
+                rows="3"
+                className="w-full px-3 py-2 bg-[#232333] rounded-lg text-[#EAEAFB] resize-none"
+                placeholder="Breve descrição sobre sua experiência..."
               />
             </>
           )}

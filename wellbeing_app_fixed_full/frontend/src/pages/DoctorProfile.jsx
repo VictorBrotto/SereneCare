@@ -9,6 +9,7 @@ export default function DoctorProfile() {
   const navigate = useNavigate();
   const [doctor, setDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [startingChat, setStartingChat] = useState(false);
 
   useEffect(() => {
     fetchDoctor();
@@ -17,7 +18,7 @@ export default function DoctorProfile() {
   const fetchDoctor = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(`http://localhost:8080/api/doctors/${id}`, {
+      const res = await axios.get(`http://localhost:8080/api/users/doctors/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setDoctor(res.data);
@@ -29,6 +30,9 @@ export default function DoctorProfile() {
   };
 
   const startChat = async () => {
+    if (startingChat) return;
+    
+    setStartingChat(true);
     try {
       const token = localStorage.getItem("token");
       const res = await axios.post("http://localhost:8080/api/chats/start", 
@@ -36,12 +40,13 @@ export default function DoctorProfile() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      // Navega para o chat criado
+      // ✅ AGORA VAI FUNCIONAR - Navega para o chat criado
       navigate(`/chats/${res.data.id}`);
     } catch (err) {
       console.error("Erro ao iniciar chat", err);
-      // Fallback - navega para chats gerais
-      navigate('/chats');
+      alert("Erro ao iniciar conversa. Tente novamente.");
+    } finally {
+      setStartingChat(false);
     }
   };
 
@@ -88,11 +93,7 @@ export default function DoctorProfile() {
             <div className="flex flex-col md:flex-row items-start gap-6">
               {/* Foto */}
               <div className="w-24 h-24 bg-gradient-to-br from-[#6666C4] to-[#5454F0] rounded-full flex items-center justify-center text-white font-bold text-2xl">
-                {doctor.profileImage ? (
-                  <img src={doctor.profileImage} alt={doctor.fullName} className="w-full h-full rounded-full object-cover" />
-                ) : (
-                  doctor.fullName.split(' ').map(n => n[0]).join('')
-                )}
+                {doctor.fullName.split(' ').map(n => n[0]).join('')}
               </div>
 
               {/* Informações Principais */}
@@ -128,10 +129,19 @@ export default function DoctorProfile() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={startChat}
-                  className="flex items-center gap-2 bg-gradient-to-r from-[#6666C4] to-[#5454F0] text-white px-6 py-3 rounded-xl font-semibold transition-all hover:from-[#5454F0] hover:to-[#6666C4]"
+                  disabled={startingChat}
+                  className="flex items-center gap-2 bg-gradient-to-r from-[#6666C4] to-[#5454F0] text-white px-6 py-3 rounded-xl font-semibold transition-all hover:from-[#5454F0] hover:to-[#6666C4] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <ChatBubbleLeftRightIcon className="w-5 h-5" />
-                  Iniciar Conversa
+                  {startingChat ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                    />
+                  ) : (
+                    <ChatBubbleLeftRightIcon className="w-5 h-5" />
+                  )}
+                  {startingChat ? "Iniciando..." : "Iniciar Conversa"}
                 </motion.button>
               </div>
             </div>
@@ -159,30 +169,6 @@ export default function DoctorProfile() {
                     </p>
                   </div>
                 </section>
-
-                {/* Serviços */}
-                <section>
-                  <h2 className="text-xl font-semibold text-[#EAEAFB] mb-4">Área de Atuação</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {[
-                      "Consulta médica",
-                      "Acompanhamento clínico", 
-                      "Orientações de tratamento",
-                      "Prescrição médica"
-                    ].map((service, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="flex items-center gap-3 bg-[#232333] rounded-xl p-4 border border-[#34344A] hover:border-[#6666C4] transition-colors"
-                      >
-                        <div className="w-2 h-2 bg-[#6666C4] rounded-full"></div>
-                        <span className="text-[#CFCFE8]">{service}</span>
-                      </motion.div>
-                    ))}
-                  </div>
-                </section>
               </div>
 
               {/* Sidebar */}
@@ -206,24 +192,24 @@ export default function DoctorProfile() {
                   </div>
                 </section>
 
-                {/* Disponibilidade */}
-                <section className="bg-[#232333] rounded-xl p-6 border border-[#34344A]">
-                  <h3 className="text-lg font-semibold text-[#EAEAFB] mb-3">Disponibilidade</h3>
-                  <div className="flex items-center gap-2 text-[#CFCFE8]">
-                    <CalendarIcon className="w-5 h-5" />
-                    <span>Segunda a Sexta, 8h às 18h</span>
-                  </div>
-                </section>
-
                 {/* Botão de Chat Fixo */}
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={startChat}
-                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#6666C4] to-[#5454F0] text-white py-4 rounded-xl font-semibold transition-all hover:from-[#5454F0] hover:to-[#6666C4] shadow-lg"
+                  disabled={startingChat}
+                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#6666C4] to-[#5454F0] text-white py-4 rounded-xl font-semibold transition-all hover:from-[#5454F0] hover:to-[#6666C4] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <ChatBubbleLeftRightIcon className="w-5 h-5" />
-                  Iniciar Conversa
+                  {startingChat ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                    />
+                  ) : (
+                    <ChatBubbleLeftRightIcon className="w-5 h-5" />
+                  )}
+                  {startingChat ? "Iniciando..." : "Iniciar Conversa"}
                 </motion.button>
               </div>
             </div>

@@ -58,7 +58,7 @@ const Slider = React.memo(({ name, value, config, onChange }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="bg-[#232333] p-6 rounded-2xl border border-[#34344A] hover:border-[#44445A] transition-all duration-300"
+      className="bg-[#29293E] p-6 rounded-2xl border border-[#5F5F70] hover:border-[#6A6A9C] transition-all duration-300"
     >
       {/* Header do Slider */}
       <div className="flex items-center justify-between mb-6">
@@ -91,7 +91,7 @@ const Slider = React.memo(({ name, value, config, onChange }) => {
             className="flex flex-col items-center gap-1"
           >
             <span className="text-lg">{icon}</span>
-            <div className="w-1 h-1 bg-[#44445A] rounded-full"></div>
+            <div className="w-1 h-1 bg-[#5F5F70] rounded-full"></div>
           </div>
         ))}
       </div>
@@ -167,15 +167,15 @@ const Slider = React.memo(({ name, value, config, onChange }) => {
 export default function DailyForm() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    pain_level: 0,
-    sleep_quality: 5,
+    painLevel: 0,
+    sleepQuality: 5,
     mood: 5,
     symptoms: "",
     triggers: "",
-    diet_meals: "",
-    physical_activity: "",
+    dietMeals: "",
+    physicalActivity: "",
     medications: "",
-    additional_notes: "",
+    additionalNotes: "",
   });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -193,20 +193,54 @@ export default function DailyForm() {
     setSaving(true);
     try {
       const token = localStorage.getItem("token");
-      await axios.post("http://localhost:8080/api/daily", form, {
-        headers: { Authorization: `Bearer ${token}` },
+      const userId = localStorage.getItem("userId");
+      
+      // ✅ CORREÇÃO: Enviar dados no formato correto que o backend espera
+      const dailyLogData = {
+        userId: parseInt(userId),
+        painLevel: form.painLevel,
+        sleepQuality: form.sleepQuality,
+        mood: form.mood,
+        symptoms: form.symptoms,
+        triggers: form.triggers,
+        dietMeals: form.dietMeals,
+        physicalActivity: form.physicalActivity,
+        medications: form.medications,
+        additionalNotes: form.additionalNotes,
+      };
+
+      console.log("Enviando dados:", dailyLogData);
+
+      const response = await axios.post("http://localhost:8080/api/daily", dailyLogData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
       });
+
+      console.log("Resposta do servidor:", response.data);
+      
       setSaving(false);
       navigate("/history");
     } catch (err) {
       setSaving(false);
-      setError("Erro ao salvar. Tente novamente.");
+      console.error("Erro completo:", err);
+      console.error("Resposta do erro:", err.response?.data);
+      
+      if (err.response?.status === 401) {
+        setError("Sessão expirada. Faça login novamente.");
+        setTimeout(() => navigate("/login"), 2000);
+      } else if (err.response?.data) {
+        setError(`Erro ao salvar: ${err.response.data}`);
+      } else {
+        setError("Erro de conexão. Verifique se o servidor está rodando.");
+      }
     }
   };
 
   // Configurações dos sliders
   const sliderConfigs = {
-    pain_level: {
+    painLevel: {
       label: "Nível de Dor",
       emoji: "😣",
       colors: {
@@ -216,7 +250,7 @@ export default function DailyForm() {
       },
       icons: ["😊", "😐", "😖", "😫", "🤕"]
     },
-    sleep_quality: {
+    sleepQuality: {
       label: "Qualidade do Sono",
       emoji: "😴",
       colors: {
@@ -242,19 +276,19 @@ export default function DailyForm() {
   const textFields = [
     { name: "symptoms", label: "Sintomas", rows: 3, placeholder: "Descreva quaisquer sintomas que sentiu hoje..." },
     { name: "triggers", label: "Gatilhos", rows: 1, placeholder: "Fatores que pioraram sua condição..." },
-    { name: "diet_meals", label: "Dieta / Refeições", rows: 1, placeholder: "O que você comeu hoje..." },
-    { name: "physical_activity", label: "Atividade Física", rows: 1, placeholder: "Exercícios ou atividades físicas realizadas..." },
+    { name: "dietMeals", label: "Dieta / Refeições", rows: 1, placeholder: "O que você comeu hoje..." },
+    { name: "physicalActivity", label: "Atividade Física", rows: 1, placeholder: "Exercícios ou atividades físicas realizadas..." },
     { name: "medications", label: "Medicações", rows: 1, placeholder: "Medicamentos tomados hoje..." },
-    { name: "additional_notes", label: "Notas Adicionais", rows: 3, placeholder: "Alguma observação adicional..." }
+    { name: "additionalNotes", label: "Notas Adicionais", rows: 3, placeholder: "Alguma observação adicional..." }
   ];
 
   return (
-    <div className="min-h-screen flex items-start justify-center pt-16 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-[#1F1F33] via-[#2A2A44] to-[#363645] pb-12">
+    <div className="min-h-screen flex items-start justify-center pt-16 bg-gradient-to-br from-[#1F1F33] to-[#363645] pb-12">
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="bg-[#29293E] p-8 rounded-2xl shadow-2xl w-full max-w-4xl border border-[#34344A]"
+        className="bg-[#29293E] p-8 rounded-2xl shadow-2xl w-full max-w-4xl border border-[#5F5F70]"
       >
         {/* Header */}
         <motion.div
@@ -283,15 +317,15 @@ export default function DailyForm() {
           {/* Sliders */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Slider 
-              name="pain_level" 
-              value={form.pain_level} 
-              config={sliderConfigs.pain_level} 
+              name="painLevel" 
+              value={form.painLevel} 
+              config={sliderConfigs.painLevel} 
               onChange={handleSliderChange}
             />
             <Slider 
-              name="sleep_quality" 
-              value={form.sleep_quality} 
-              config={sliderConfigs.sleep_quality} 
+              name="sleepQuality" 
+              value={form.sleepQuality} 
+              config={sliderConfigs.sleepQuality} 
               onChange={handleSliderChange}
             />
             <Slider 
@@ -334,7 +368,7 @@ export default function DailyForm() {
                     whileFocus={{ 
                       scale: 1.02,
                     }}
-                    className="w-full p-4 rounded-xl bg-[#232333] text-[#EAEAFB] focus:ring-2 focus:ring-[#6666C4] outline-none resize-none border border-[#34344A] transition-all duration-300 relative z-10"
+                    className="w-full p-4 rounded-xl bg-[#1F1F33] text-[#EAEAFB] focus:ring-2 focus:ring-[#6666C4] outline-none resize-none border border-[#5F5F70] transition-all duration-300 relative z-10"
                     rows={field.rows}
                   />
                 ) : (
@@ -348,7 +382,7 @@ export default function DailyForm() {
                     whileFocus={{ 
                       scale: 1.02,
                     }}
-                    className="w-full p-4 rounded-xl bg-[#232333] text-[#EAEAFB] focus:ring-2 focus:ring-[#6666C4] outline-none border border-[#34344A] transition-all duration-300 relative z-10"
+                    className="w-full p-4 rounded-xl bg-[#1F1F33] text-[#EAEAFB] focus:ring-2 focus:ring-[#6666C4] outline-none border border-[#5F5F70] transition-all duration-300 relative z-10"
                   />
                 )}
 
@@ -416,9 +450,9 @@ export default function DailyForm() {
             <motion.button
               type="button"
               onClick={() => navigate("/history")}
-              whileHover={{ scale: 1.05, backgroundColor: "#2D2D45" }}
+              whileHover={{ scale: 1.05, backgroundColor: "#363645" }}
               whileTap={{ scale: 0.95 }}
-              className="bg-transparent border border-[#44435A] text-[#EAEAFB] px-6 py-4 rounded-xl hover:bg-[#2D2D45] transition-all flex items-center gap-2"
+              className="bg-transparent border border-[#5F5F70] text-[#EAEAFB] px-6 py-4 rounded-xl hover:bg-[#363645] transition-all flex items-center gap-2"
             >
               <span>📊</span>
               Ver Histórico

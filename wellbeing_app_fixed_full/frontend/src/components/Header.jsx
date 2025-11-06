@@ -8,7 +8,10 @@ import {
   ArrowRightOnRectangleIcon, 
   ChatBubbleLeftEllipsisIcon,
   UserGroupIcon,
-  ChevronDownIcon
+  ChevronDownIcon,
+  UserCircleIcon,
+  Cog6ToothIcon,
+  HeartIcon
 } from "@heroicons/react/24/outline";
 import axios from "axios";
 
@@ -18,16 +21,20 @@ export default function Header() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showChatDropdown, setShowChatDropdown] = useState(false);
   const [showDoctorsDropdown, setShowDoctorsDropdown] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [chats, setChats] = useState([]);
   const [doctors, setDoctors] = useState([]);
+  const [userInfo, setUserInfo] = useState(null);
   const [loadingChats, setLoadingChats] = useState(false);
   const [loadingDoctors, setLoadingDoctors] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const dropdownRef = useRef();
   const doctorsDropdownRef = useRef();
+  const profileDropdownRef = useRef();
   const logoutModalRef = useRef();
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role") || "PATIENT";
+  const userId = localStorage.getItem("userId");
 
   // Efeito para detectar scroll
   useEffect(() => {
@@ -40,6 +47,13 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Efeito para buscar informações do usuário
+  useEffect(() => {
+    if (userId) {
+      fetchUserInfo();
+    }
+  }, [userId]);
+
   // Efeito para fechar dropdowns ao clicar fora
   useEffect(() => {
     function onClickOutside(e) {
@@ -48,6 +62,9 @@ export default function Header() {
       }
       if (doctorsDropdownRef.current && !doctorsDropdownRef.current.contains(e.target)) {
         setShowDoctorsDropdown(false);
+      }
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(e.target)) {
+        setShowProfileDropdown(false);
       }
       if (logoutModalRef.current && !logoutModalRef.current.contains(e.target) && showLogoutModal) {
         setShowLogoutModal(false);
@@ -69,6 +86,17 @@ export default function Header() {
     }
   }, [showDoctorsDropdown, role]);
 
+  const fetchUserInfo = async () => {
+    try {
+      const res = await axios.get(`http://localhost:8080/api/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUserInfo(res.data);
+    } catch (err) {
+      console.error("Erro ao buscar informações do usuário", err);
+    }
+  };
+
   const fetchChats = async () => {
     setLoadingChats(true);
     try {
@@ -86,10 +114,10 @@ export default function Header() {
   const fetchDoctors = async () => {
     setLoadingDoctors(true);
     try {
-      const res = await axios.get("http://localhost:8080/api/doctors", {
+      const res = await axios.get("http://localhost:8080/api/users/doctors", {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setDoctors(res.data.slice(0, 5) || []); // Mostra apenas os 5 primeiros
+      setDoctors(res.data.slice(0, 5) || []);
     } catch (err) {
       console.error("Erro ao buscar doutores", err);
     } finally {
@@ -100,11 +128,14 @@ export default function Header() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("username");
+    localStorage.removeItem("email");
     setShowLogoutModal(false);
     navigate("/");
   };
 
-  const isActive = (p) => location.pathname === p ? "text-[#EAEAFB] font-semibold bg-[#2D2D45]" : "text-[#CFCFE8] hover:text-[#EAEAFB] hover:bg-[#2D2D45]";
+  const isActive = (p) => location.pathname === p ? "text-[#EAEAFB] font-semibold bg-[#363645]" : "text-[#CFCFE8] hover:text-[#EAEAFB] hover:bg-[#363645]";
 
   return (
     <>
@@ -128,7 +159,9 @@ export default function Header() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
-          <img src="/logo.png" alt="logo" className="w-8 h-8 rounded-full" />
+          <div className="w-8 h-8 bg-gradient-to-br from-[#6666C4] to-[#5454F0] rounded-full flex items-center justify-center">
+            <HeartIcon className="w-5 h-5 text-white" />
+          </div>
           <div className="text-lg font-semibold text-[#EAEAFB]">SereneCare</div>
         </motion.div>
 
@@ -172,8 +205,8 @@ export default function Header() {
                 onClick={() => setShowDoctorsDropdown(!showDoctorsDropdown)}
                 className={`flex items-center gap-1 px-3 py-2 rounded-md transition-all duration-200 ${
                   location.pathname.startsWith("/doctors") 
-                    ? "text-[#EAEAFB] font-semibold bg-[#2D2D45]" 
-                    : "text-[#CFCFE8] hover:text-[#EAEAFB] hover:bg-[#2D2D45]"
+                    ? "text-[#EAEAFB] font-semibold bg-[#363645]" 
+                    : "text-[#CFCFE8] hover:text-[#EAEAFB] hover:bg-[#363645]"
                 }`}
               >
                 <UserGroupIcon className="h-5 w-5" />
@@ -188,10 +221,10 @@ export default function Header() {
                     animate={{ opacity: 1, y: 0, scale: 1 }} 
                     exit={{ opacity: 0, y: 6, scale: 0.95 }} 
                     transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="absolute left-0 mt-2 w-72 bg-[#29293E] rounded-xl shadow-2xl z-50 border border-[#363645] backdrop-blur-md"
+                    className="absolute left-0 mt-2 w-72 bg-[#29293E] rounded-xl shadow-2xl z-50 border border-[#5F5F70] backdrop-blur-md"
                   >
                     {/* Header do Dropdown */}
-                    <div className="p-4 border-b border-[#363645]">
+                    <div className="p-4 border-b border-[#5F5F70]">
                       <div className="flex items-center gap-2">
                         <UserGroupIcon className="h-5 w-5 text-[#6666C4]" />
                         <h3 className="text-sm font-semibold text-[#EAEAFB]">Nossos Doutores</h3>
@@ -219,7 +252,7 @@ export default function Header() {
                           {doctors.map((doctor) => (
                             <motion.div
                               key={doctor.id}
-                              whileHover={{ x: 2, backgroundColor: "#2D2D45" }}
+                              whileHover={{ x: 2, backgroundColor: "#363645" }}
                               whileTap={{ scale: 0.98 }}
                               className="flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all duration-200 group"
                               onClick={() => { 
@@ -228,11 +261,7 @@ export default function Header() {
                               }}
                             >
                               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#6666C4] to-[#5454F0] flex items-center justify-center text-white font-semibold text-sm">
-                                {doctor.profileImage ? (
-                                  <img src={doctor.profileImage} alt={doctor.fullName} className="w-full h-full rounded-full object-cover" />
-                                ) : (
-                                  doctor.fullName.split(' ').map(n => n[0]).join('')
-                                )}
+                                {doctor.fullName.split(' ').map(n => n[0]).join('')}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="text-sm font-semibold text-[#EAEAFB] truncate group-hover:text-white">
@@ -253,7 +282,7 @@ export default function Header() {
                     </div>
 
                     {/* Footer do Dropdown */}
-                    <div className="p-3 border-t border-[#363645] bg-[#232333] rounded-b-xl">
+                    <div className="p-3 border-t border-[#5F5F70] bg-[#1F1F33] rounded-b-xl">
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
@@ -281,7 +310,7 @@ export default function Header() {
               whileHover={{ scale: 1.08 }} 
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowChatDropdown(!showChatDropdown)} 
-              className="p-2 rounded-md text-[#EAEAFB] hover:bg-[#2D2D45] transition-all duration-200"
+              className="p-2 rounded-md text-[#EAEAFB] hover:bg-[#363645] transition-all duration-200"
             >
               <ChatBubbleLeftEllipsisIcon className="h-6 w-6" />
             </motion.button>
@@ -293,9 +322,9 @@ export default function Header() {
                   animate={{ opacity: 1, y: 0, scale: 1 }} 
                   exit={{ opacity: 0, y: 6, scale: 0.95 }} 
                   transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="absolute right-0 mt-2 w-80 bg-[#29293E] rounded-xl shadow-2xl z-50 border border-[#363645] backdrop-blur-md"
+                  className="absolute right-0 mt-2 w-80 bg-[#29293E] rounded-xl shadow-2xl z-50 border border-[#5F5F70] backdrop-blur-md"
                 >
-                  <div className="p-4 border-b border-[#363645]">
+                  <div className="p-4 border-b border-[#5F5F70]">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
                         <ChatBubbleLeftEllipsisIcon className="h-5 w-5 text-[#6666C4]" />
@@ -331,12 +360,12 @@ export default function Header() {
                           {chats.map((c) => (
                             <motion.div 
                               key={c.id} 
-                              className="flex items-center gap-3 p-3 rounded-lg hover:bg-[#2D2D45] cursor-pointer transition-all duration-200 group"
+                              className="flex items-center gap-3 p-3 rounded-lg hover:bg-[#363645] cursor-pointer transition-all duration-200 group"
                               onClick={() => { navigate(`/chats/${c.id}`); setShowChatDropdown(false); }}
                               whileHover={{ x: 2 }}
                               whileTap={{ scale: 0.98 }}
                             >
-                              <div className="w-10 h-10 rounded-full bg-[#363645] flex items-center justify-center text-sm text-[#EAEAFB] font-semibold">
+                              <div className="w-10 h-10 rounded-full bg-[#5F5F70] flex items-center justify-center text-sm text-[#EAEAFB] font-semibold">
                                 {role === "DOCTOR" ? (c.patientName ? c.patientName[0] : "P") : (c.doctorName ? c.doctorName[0] : "D")}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -356,27 +385,108 @@ export default function Header() {
             </AnimatePresence>
           </div>
 
-          {/* Logout */}
-          <motion.button 
-            whileHover={{ scale: 1.07 }} 
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowLogoutModal(true)} 
-            className="flex items-center gap-2 p-2 rounded-md text-[#EAEAFB] hover:text-[#FF6B6B] hover:bg-[#2D2D45] transition-all duration-200"
-          >
-            <ArrowRightOnRectangleIcon className="h-6 w-6" />
-            <span className="hidden sm:inline">Sair</span>
-          </motion.button>
+          {/* Botão de Perfil */}
+          <div className="relative" ref={profileDropdownRef}>
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+              className="flex items-center gap-2 p-2 rounded-md text-[#EAEAFB] hover:bg-[#363645] transition-all duration-200"
+            >
+              <UserCircleIcon className="h-6 w-6" />
+              <ChevronDownIcon className={`h-4 w-4 transition-transform duration-200 ${showProfileDropdown ? "rotate-180" : ""}`} />
+            </motion.button>
+
+            <AnimatePresence>
+              {showProfileDropdown && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 6, scale: 0.95 }} 
+                  animate={{ opacity: 1, y: 0, scale: 1 }} 
+                  exit={{ opacity: 0, y: 6, scale: 0.95 }} 
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="absolute right-0 mt-2 w-64 bg-[#29293E] rounded-xl shadow-2xl z-50 border border-[#5F5F70] backdrop-blur-md"
+                >
+                  {/* Header do Perfil */}
+                  <div className="p-4 border-b border-[#5F5F70]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#6666C4] to-[#5454F0] flex items-center justify-center text-white font-semibold">
+                        {userInfo?.fullName?.split(' ').map(n => n[0]).join('') || "U"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-[#EAEAFB] truncate">
+                          {userInfo?.fullName || "Usuário"}
+                        </div>
+                        <div className="text-xs text-[#6666C4] capitalize">
+                          {role.toLowerCase()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Opções do Menu */}
+                  <div className="p-2">
+                    <motion.button
+                      whileHover={{ x: 2, backgroundColor: "#363645" }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => { 
+                        navigate("/profile"); 
+                        setShowProfileDropdown(false); 
+                      }}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg text-[#EAEAFB] hover:text-white transition-all duration-200 text-left"
+                    >
+                      <UserCircleIcon className="h-5 w-5 text-[#6666C4]" />
+                      <div>
+                        <div className="text-sm font-medium">Meu Perfil</div>
+                        <div className="text-xs text-[#A5A5D6]">Ver e editar perfil</div>
+                      </div>
+                    </motion.button>
+
+                    <motion.button
+                      whileHover={{ x: 2, backgroundColor: "#363645" }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => { 
+                        navigate("/settings"); 
+                        setShowProfileDropdown(false); 
+                      }}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg text-[#EAEAFB] hover:text-white transition-all duration-200 text-left"
+                    >
+                      <Cog6ToothIcon className="h-5 w-5 text-[#6666C4]" />
+                      <div>
+                        <div className="text-sm font-medium">Configurações</div>
+                        <div className="text-xs text-[#A5A5D6]">Senha, e-mail, etc.</div>
+                      </div>
+                    </motion.button>
+                  </div>
+
+                  {/* Logout */}
+                  <div className="p-3 border-t border-[#5F5F70] bg-[#1F1F33] rounded-b-xl">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => { 
+                        setShowProfileDropdown(false);
+                        setShowLogoutModal(true);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-[#5F5F70] hover:bg-[#6A6A9C] text-white text-sm font-semibold rounded-lg transition-all duration-200"
+                    >
+                      <ArrowRightOnRectangleIcon className="h-4 w-4" />
+                      Sair da Conta
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </motion.header>
 
       {/* Spacer com altura exata da header */}
       <div className="h-16" />
 
-      {/* Modal de Logout Corrigido */}
+      {/* Modal de Logout */}
       <AnimatePresence>
         {showLogoutModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
-            {/* Backdrop - corrigido para permitir clicks */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -385,23 +495,22 @@ export default function Header() {
               onClick={() => setShowLogoutModal(false)}
             />
             
-            {/* Modal Content */}
             <motion.div 
               ref={logoutModalRef}
               initial={{ opacity: 0, y: 12, scale: 0.96 }} 
               animate={{ opacity: 1, y: 0, scale: 1 }} 
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="bg-[#29293E] p-6 rounded-2xl shadow-2xl w-[90%] max-w-sm text-center border border-[#34344A] relative z-50"
+              className="bg-[#29293E] p-6 rounded-2xl shadow-2xl w-[90%] max-w-sm text-center border border-[#5F5F70] relative z-50"
             >
               <h3 className="text-lg font-semibold mb-2 text-[#EAEAFB]">Confirmar saída</h3>
-              <p className="text-sm text-[#CFCFE8] mb-6">Tem certeza que deseja sair da sua conta? Você será redirecionado para a tela inicial.</p>
+              <p className="text-sm text-[#CFCFE8] mb-6">Tem certeza que deseja sair da sua conta?</p>
               <div className="flex justify-center gap-3">
                 <motion.button 
                   whileHover={{ scale: 1.03 }} 
                   whileTap={{ scale: 0.97 }}
                   onClick={() => setShowLogoutModal(false)} 
-                  className="px-4 py-2 bg-[#44446C] rounded-lg hover:bg-[#555583] text-[#EAEAFB] transition-colors duration-200"
+                  className="px-4 py-2 bg-[#5F5F70] rounded-lg hover:bg-[#6A6A9C] text-[#EAEAFB] transition-colors duration-200"
                 >
                   Cancelar
                 </motion.button>
@@ -409,7 +518,7 @@ export default function Header() {
                   whileHover={{ scale: 1.03 }} 
                   whileTap={{ scale: 0.97 }}
                   onClick={handleLogout} 
-                  className="px-4 py-2 bg-[#FF6B6B] rounded-lg text-white hover:bg-[#FF4F4F] transition-colors duration-200"
+                  className="px-4 py-2 bg-gradient-to-r from-[#6666C4] to-[#5454F0] rounded-lg text-white hover:from-[#5454F0] hover:to-[#6666C4] transition-all duration-200"
                 >
                   Sair
                 </motion.button>

@@ -13,6 +13,8 @@ import ChatsPage from './pages/Chats';
 import ChatThread from './pages/ChatThread';
 import DoctorsList from './pages/DoctorsList';
 import DoctorProfile from './pages/DoctorProfile';
+import ProfilePage from './pages/ProfilePage';
+import SettingsPage from './pages/SettingsPage';
 
 export default function App() {
   const location = useLocation();
@@ -90,6 +92,22 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <DoctorProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <SettingsPage />
               </ProtectedRoute>
             }
           />

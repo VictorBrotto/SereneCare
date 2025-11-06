@@ -17,29 +17,18 @@ public class RegisterRequest {
 
     private String fullName;
 
-    // papel do usuário (opcional: "ROLE_PATIENT" ou "ROLE_DOCTOR")
     private String role;
 
-    // usado no frontend para saber se é um doutor
     private boolean doctor;
 
     // campos adicionais caso seja doutor
     private String especializacao;
     private String crm;
+    private Integer experienceYears;
+    private String bio;
+    private String location;
 
     public RegisterRequest() {}
-
-    public RegisterRequest(String username, String email, String password, String fullName, String role, boolean doctor,
-                           String especializacao, String crm) {
-        this.username = username;
-        this.email = email;
-        this.password = password;
-        this.fullName = fullName;
-        this.role = role;
-        this.doctor = doctor;
-        this.especializacao = especializacao;
-        this.crm = crm;
-    }
 
     // Getters e Setters
     public String getUsername() { return username; }
@@ -65,4 +54,13 @@ public class RegisterRequest {
 
     public String getCrm() { return crm; }
     public void setCrm(String crm) { this.crm = crm; }
+
+    public Integer getExperienceYears() { return experienceYears; }
+    public void setExperienceYears(Integer experienceYears) { this.experienceYears = experienceYears; }
+
+    public String getBio() { return bio; }
+    public void setBio(String bio) { this.bio = bio; }
+
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
 }
