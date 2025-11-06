@@ -12,6 +12,10 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ChatsPage from './pages/Chats';
 import ChatThread from './pages/ChatThread';
 
+// Importe os novos componentes
+import DoctorsList from "./pages/DoctorsList";
+import DoctorProfile from "./pages/DoctorProfile";
+
 
 export default function App() {
   const location = useLocation();
@@ -35,7 +39,10 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/chats" element={<ChatsPage />} />
           <Route path="/chats/:id" element={<ChatThread />} />
-
+          
+          {/* Novas rotas de doutores */}
+          <Route path="/doctors" element={<DoctorsList />} />
+          <Route path="/doctors/:id" element={<DoctorProfile />} />
 
           {/* Páginas protegidas */}
           <Route

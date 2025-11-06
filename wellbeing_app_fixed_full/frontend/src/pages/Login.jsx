@@ -31,9 +31,9 @@ export default function Login() {
 
     try {
       const res = await axios.post("http://localhost:8080/api/auth/login", {
-        identifier: form.identifier, // Envia o username ou email
-        password: form.password,     // Envia a senha
-        role: role,                  // Role (selecione "PATIENT" ou "DOCTOR")
+        username: form.identifier,  // ✅ CORRETO
+        password: form.password,
+        role: role,  // ✅ AGORA ENVIAMOS A ROLE PARA VALIDAÇÃO
       });
 
       // Armazena o token no localStorage e a role
@@ -43,7 +43,14 @@ export default function Login() {
       // Redireciona para a página de home
       navigate("/home");
     } catch (err) {
-      setError("❌ Credenciais inválidas. Tente novamente.");
+      // ✅ MELHOR TRATAMENTO DE ERRO
+      if (err.response?.status === 403) {
+        setError("❌ Tipo de conta incorreto. Selecione a opção correta.");
+      } else if (err.response?.status === 401) {
+        setError("❌ Credenciais inválidas. Tente novamente.");
+      } else {
+        setError("❌ Erro de conexão. Tente novamente.");
+      }
     }
   };
 
