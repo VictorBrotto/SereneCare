@@ -11,11 +11,8 @@ import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ChatsPage from './pages/Chats';
 import ChatThread from './pages/ChatThread';
-
-// Importe os novos componentes
-import DoctorsList from "./pages/DoctorsList";
-import DoctorProfile from "./pages/DoctorProfile";
-
+import DoctorsList from './pages/DoctorsList';
+import DoctorProfile from './pages/DoctorProfile';
 
 export default function App() {
   const location = useLocation();
@@ -35,14 +32,9 @@ export default function App() {
         <Routes>
           {/* Páginas públicas */}
           <Route path="/" element={<Welcome />} />
+          <Route path="/welcome" element={<Welcome />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/chats" element={<ChatsPage />} />
-          <Route path="/chats/:id" element={<ChatThread />} />
-          
-          {/* Novas rotas de doutores */}
-          <Route path="/doctors" element={<DoctorsList />} />
-          <Route path="/doctors/:id" element={<DoctorProfile />} />
 
           {/* Páginas protegidas */}
           <Route
@@ -66,6 +58,38 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <History />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chats"
+            element={
+              <ProtectedRoute>
+                <ChatsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chats/:id"
+            element={
+              <ProtectedRoute>
+                <ChatThread />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctors"
+            element={
+              <ProtectedRoute>
+                <DoctorsList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctors/:id"
+            element={
+              <ProtectedRoute>
+                <DoctorProfile />
               </ProtectedRoute>
             }
           />

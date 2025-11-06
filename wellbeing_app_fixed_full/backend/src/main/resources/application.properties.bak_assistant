@@ -1,7 +1,7 @@
 # ===============================
 # BANCO DE DADOS POSTGRES LOCAL
 # ===============================
-spring.datasource.url=jdbc:postgresql://localhost:5432/wellbeing
+spring.datasource.url=jdbc:postgresql://localhost:5432/SereneCare
 spring.datasource.username=postgres
 spring.datasource.password=postgres
 spring.datasource.driver-class-name=org.postgresql.Driver

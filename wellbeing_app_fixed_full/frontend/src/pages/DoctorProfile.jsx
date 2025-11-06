@@ -23,29 +23,6 @@ export default function DoctorProfile() {
       setDoctor(res.data);
     } catch (err) {
       console.error("Erro ao buscar doutor", err);
-      // Mock data
-      setDoctor({
-        id: parseInt(id),
-        name: "Dr. João Silva",
-        specialty: "Cardiologia",
-        experience: 12,
-        rating: 4.8,
-        reviews: 127,
-        location: "São Paulo, SP",
-        image: "/doctor1.jpg",
-        description: "Especialista em cardiologia preventiva e tratamento de doenças cardíacas. Atuo com foco na saúde cardiovascular integral do paciente, desde prevenção até tratamentos complexos.",
-        education: "USP - Faculdade de Medicina",
-        languages: ["Português", "Inglês", "Espanhol"],
-        about: "Com mais de 12 anos de experiência em cardiologia, dedico-me ao cuidado integral da saúde do coração. Acredito na medicina preventiva e na construção de uma relação de confiança com meus pacientes.",
-        services: [
-          "Consulta cardiológica",
-          "Ecocardiograma",
-          "Teste ergométrico",
-          "Holter 24h",
-          "Acompanhamento pós-operatório"
-        ],
-        availability: "Segunda a Sexta, 8h às 18h"
-      });
     } finally {
       setLoading(false);
     }
@@ -63,8 +40,8 @@ export default function DoctorProfile() {
       navigate(`/chats/${res.data.id}`);
     } catch (err) {
       console.error("Erro ao iniciar chat", err);
-      // Se der erro, cria um chat mock
-      navigate(`/chats/new-${id}`);
+      // Fallback - navega para chats gerais
+      navigate('/chats');
     }
   };
 
@@ -111,32 +88,37 @@ export default function DoctorProfile() {
             <div className="flex flex-col md:flex-row items-start gap-6">
               {/* Foto */}
               <div className="w-24 h-24 bg-gradient-to-br from-[#6666C4] to-[#5454F0] rounded-full flex items-center justify-center text-white font-bold text-2xl">
-                {doctor.image ? (
-                  <img src={doctor.image} alt={doctor.name} className="w-full h-full rounded-full object-cover" />
+                {doctor.profileImage ? (
+                  <img src={doctor.profileImage} alt={doctor.fullName} className="w-full h-full rounded-full object-cover" />
                 ) : (
-                  doctor.name.split(' ').map(n => n[0]).join('')
+                  doctor.fullName.split(' ').map(n => n[0]).join('')
                 )}
               </div>
 
               {/* Informações Principais */}
               <div className="flex-1">
-                <h1 className="text-3xl font-bold text-[#EAEAFB] mb-2">{doctor.name}</h1>
-                <p className="text-xl text-[#6666C4] font-semibold mb-4">{doctor.specialty}</p>
+                <h1 className="text-3xl font-bold text-[#EAEAFB] mb-2">{doctor.fullName}</h1>
+                <p className="text-xl text-[#6666C4] font-semibold mb-4">{doctor.especializacao}</p>
                 
                 <div className="flex flex-wrap gap-4 mb-4">
                   <div className="flex items-center gap-2">
                     <StarIcon className="w-5 h-5 text-yellow-400 fill-current" />
-                    <span className="text-[#EAEAFB] font-semibold">{doctor.rating}</span>
-                    <span className="text-[#A5A5D6]">({doctor.reviews} avaliações)</span>
+                    <span className="text-[#EAEAFB] font-semibold">{doctor.rating || 4.5}</span>
+                    <span className="text-[#A5A5D6]">({doctor.reviewCount || 0} avaliações)</span>
                   </div>
                   <div className="flex items-center gap-2 text-[#A5A5D6]">
                     <AcademicCapIcon className="w-5 h-5" />
-                    <span>{doctor.experience} anos de experiência</span>
+                    <span>{doctor.experienceYears || 5} anos de experiência</span>
                   </div>
                   <div className="flex items-center gap-2 text-[#A5A5D6]">
                     <MapPinIcon className="w-5 h-5" />
-                    <span>{doctor.location}</span>
+                    <span>{doctor.location || "Localização não informada"}</span>
                   </div>
+                </div>
+
+                {/* CRM */}
+                <div className="text-[#A5A5D6]">
+                  <strong>CRM:</strong> {doctor.crm}
                 </div>
               </div>
 
@@ -163,22 +145,31 @@ export default function DoctorProfile() {
                 {/* Sobre */}
                 <section>
                   <h2 className="text-xl font-semibold text-[#EAEAFB] mb-4">Sobre</h2>
-                  <p className="text-[#CFCFE8] leading-relaxed">{doctor.about || doctor.description}</p>
+                  <p className="text-[#CFCFE8] leading-relaxed">
+                    {doctor.bio || `Dr. ${doctor.fullName} é um profissional especializado em ${doctor.especializacao} com vasta experiência no cuidado da saúde dos pacientes.`}
+                  </p>
                 </section>
 
-                {/* Formação */}
+                {/* Contato */}
                 <section>
-                  <h2 className="text-xl font-semibold text-[#EAEAFB] mb-4">Formação</h2>
+                  <h2 className="text-xl font-semibold text-[#EAEAFB] mb-4">Contato</h2>
                   <div className="bg-[#232333] rounded-xl p-4 border border-[#34344A]">
-                    <p className="text-[#CFCFE8]">{doctor.education}</p>
+                    <p className="text-[#CFCFE8]">
+                      <strong>Email:</strong> {doctor.email}
+                    </p>
                   </div>
                 </section>
 
                 {/* Serviços */}
                 <section>
-                  <h2 className="text-xl font-semibold text-[#EAEAFB] mb-4">Serviços</h2>
+                  <h2 className="text-xl font-semibold text-[#EAEAFB] mb-4">Área de Atuação</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {doctor.services?.map((service, index) => (
+                    {[
+                      "Consulta médica",
+                      "Acompanhamento clínico", 
+                      "Orientações de tratamento",
+                      "Prescrição médica"
+                    ].map((service, index) => (
                       <motion.div
                         key={index}
                         initial={{ opacity: 0, x: -20 }}
@@ -196,16 +187,22 @@ export default function DoctorProfile() {
 
               {/* Sidebar */}
               <div className="space-y-6">
-                {/* Idiomas */}
+                {/* Informações Profissionais */}
                 <section className="bg-[#232333] rounded-xl p-6 border border-[#34344A]">
-                  <h3 className="text-lg font-semibold text-[#EAEAFB] mb-3">Idiomas</h3>
-                  <div className="space-y-2">
-                    {doctor.languages?.map((language, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-[#6666C4] rounded-full"></div>
-                        <span className="text-[#CFCFE8]">{language}</span>
-                      </div>
-                    ))}
+                  <h3 className="text-lg font-semibold text-[#EAEAFB] mb-3">Informações Profissionais</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm text-[#A5A5D6]">Especialidade</p>
+                      <p className="text-[#EAEAFB] font-medium">{doctor.especializacao}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-[#A5A5D6]">Registro Profissional</p>
+                      <p className="text-[#EAEAFB] font-medium">{doctor.crm}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-[#A5A5D6]">Experiência</p>
+                      <p className="text-[#EAEAFB] font-medium">{doctor.experienceYears || 5} anos</p>
+                    </div>
                   </div>
                 </section>
 
@@ -214,7 +211,7 @@ export default function DoctorProfile() {
                   <h3 className="text-lg font-semibold text-[#EAEAFB] mb-3">Disponibilidade</h3>
                   <div className="flex items-center gap-2 text-[#CFCFE8]">
                     <CalendarIcon className="w-5 h-5" />
-                    <span>{doctor.availability}</span>
+                    <span>Segunda a Sexta, 8h às 18h</span>
                   </div>
                 </section>
 

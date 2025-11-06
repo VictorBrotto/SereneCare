@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from "react";
 import axios from "axios";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
 // Componente Slider separado com React.memo
@@ -179,6 +179,7 @@ export default function DailyForm() {
   });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [focusedField, setFocusedField] = useState(null);
 
   const change = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -237,6 +238,16 @@ export default function DailyForm() {
     }
   };
 
+  // Campos de texto com animações
+  const textFields = [
+    { name: "symptoms", label: "Sintomas", rows: 3, placeholder: "Descreva quaisquer sintomas que sentiu hoje..." },
+    { name: "triggers", label: "Gatilhos", rows: 1, placeholder: "Fatores que pioraram sua condição..." },
+    { name: "diet_meals", label: "Dieta / Refeições", rows: 1, placeholder: "O que você comeu hoje..." },
+    { name: "physical_activity", label: "Atividade Física", rows: 1, placeholder: "Exercícios ou atividades físicas realizadas..." },
+    { name: "medications", label: "Medicações", rows: 1, placeholder: "Medicamentos tomados hoje..." },
+    { name: "additional_notes", label: "Notas Adicionais", rows: 3, placeholder: "Alguma observação adicional..." }
+  ];
+
   return (
     <div className="min-h-screen flex items-start justify-center pt-16 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-[#1F1F33] via-[#2A2A44] to-[#363645] pb-12">
       <motion.div
@@ -291,46 +302,93 @@ export default function DailyForm() {
             />
           </div>
 
-          {/* Campos de Texto */}
-          {[
-            { name: "symptoms", label: "Sintomas", rows: 3, placeholder: "Descreva quaisquer sintomas que sentiu hoje..." },
-            { name: "triggers", label: "Gatilhos", rows: 1, placeholder: "Fatores que pioraram sua condição..." },
-            { name: "diet_meals", label: "Dieta / Refeições", rows: 1, placeholder: "O que você comeu hoje..." },
-            { name: "physical_activity", label: "Atividade Física", rows: 1, placeholder: "Exercícios ou atividades físicas realizadas..." },
-            { name: "medications", label: "Medicações", rows: 1, placeholder: "Medicamentos tomados hoje..." },
-            { name: "additional_notes", label: "Notas Adicionais", rows: 3, placeholder: "Alguma observação adicional..." }
-          ].map((field, index) => (
-            <div key={field.name}>
-              <label className="text-sm text-[#CFCFE8] font-medium mb-2 block">{field.label}</label>
-              {field.rows > 1 ? (
-                <textarea
-                  name={field.name}
-                  value={form[field.name]}
-                  onChange={change}
-                  placeholder={field.placeholder}
-                  className="w-full p-4 rounded-xl bg-[#232333] text-[#EAEAFB] focus:ring-2 focus:ring-[#6666C4] outline-none resize-none border border-[#34344A] hover:border-[#44445A] transition-all"
-                  rows={field.rows}
-                />
-              ) : (
-                <input
-                  name={field.name}
-                  value={form[field.name]}
-                  onChange={change}
-                  placeholder={field.placeholder}
-                  className="w-full p-4 rounded-xl bg-[#232333] text-[#EAEAFB] focus:ring-2 focus:ring-[#6666C4] outline-none border border-[#34344A] hover:border-[#44445A] transition-all"
-                />
-              )}
-            </div>
+          {/* Campos de Texto com Animações */}
+          {textFields.map((field, index) => (
+            <motion.div
+              key={field.name}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5 + index * 0.1 }}
+            >
+              <motion.label 
+                className="text-sm text-[#CFCFE8] font-medium mb-2 block"
+                whileHover={{ x: 2 }}
+                transition={{ duration: 0.2 }}
+              >
+                {field.label}
+              </motion.label>
+              
+              <motion.div
+                className="relative"
+                whileHover={{ scale: 1.01 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              >
+                {field.rows > 1 ? (
+                  <motion.textarea
+                    name={field.name}
+                    value={form[field.name]}
+                    onChange={change}
+                    placeholder={field.placeholder}
+                    onFocus={() => setFocusedField(field.name)}
+                    onBlur={() => setFocusedField(null)}
+                    whileFocus={{ 
+                      scale: 1.02,
+                    }}
+                    className="w-full p-4 rounded-xl bg-[#232333] text-[#EAEAFB] focus:ring-2 focus:ring-[#6666C4] outline-none resize-none border border-[#34344A] transition-all duration-300 relative z-10"
+                    rows={field.rows}
+                  />
+                ) : (
+                  <motion.input
+                    name={field.name}
+                    value={form[field.name]}
+                    onChange={change}
+                    placeholder={field.placeholder}
+                    onFocus={() => setFocusedField(field.name)}
+                    onBlur={() => setFocusedField(null)}
+                    whileFocus={{ 
+                      scale: 1.02,
+                    }}
+                    className="w-full p-4 rounded-xl bg-[#232333] text-[#EAEAFB] focus:ring-2 focus:ring-[#6666C4] outline-none border border-[#34344A] transition-all duration-300 relative z-10"
+                  />
+                )}
+
+                {/* Efeito de brilho no focus */}
+                <AnimatePresence>
+                  {focusedField === field.name && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#6666C4]/10 to-[#5454F0]/10 -z-10"
+                    />
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </motion.div>
           ))}
 
-          {error && (
-            <div className="text-red-400 bg-red-400/10 p-4 rounded-xl border border-red-400/20">
-              {error}
-            </div>
-          )}
+          {/* Mensagem de erro */}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="text-red-400 bg-red-400/10 p-4 rounded-xl border border-red-400/20"
+              >
+                {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Botões */}
-          <div className="flex gap-3 pt-6">
+          <motion.div
+            className="flex gap-3 pt-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.2 }}
+          >
             <motion.button
               type="submit"
               disabled={saving}
@@ -365,7 +423,7 @@ export default function DailyForm() {
               <span>📊</span>
               Ver Histórico
             </motion.button>
-          </div>
+          </motion.div>
         </form>
       </motion.div>
     </div>
