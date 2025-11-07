@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   Cog6ToothIcon, 
@@ -10,12 +10,147 @@ import {
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("security");
+  const [privacySettings, setPrivacySettings] = useState({
+    profileVisibility: "public",
+    showOnlineStatus: true,
+    allowMessages: true,
+    showActivity: true,
+    dataCollection: false
+  });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
   const tabs = [
     { id: "security", name: "Segurança", icon: LockClosedIcon },
     { id: "notifications", name: "Notificações", icon: BellIcon },
     { id: "privacy", name: "Privacidade", icon: ShieldCheckIcon },
   ];
+
+  // Carregar configurações do usuário
+  useEffect(() => {
+    loadUserPrivacySettings();
+  }, []);
+
+  const loadUserPrivacySettings = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      const response = await fetch("http://localhost:8080/api/users/profile", {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const userData = await response.json();
+        setPrivacySettings({
+          profileVisibility: userData.profileVisibility || "public",
+          showOnlineStatus: userData.showOnlineStatus !== false,
+          allowMessages: userData.allowMessages !== false,
+          showActivity: userData.showActivity !== false,
+          dataCollection: userData.dataCollection || false
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao carregar configurações:", error);
+    }
+  };
+
+  // Handler para mudar visibilidade do perfil
+  const handleProfileVisibilityChange = (value) => {
+    setPrivacySettings(prev => ({
+      ...prev,
+      profileVisibility: value
+    }));
+  };
+
+  // Handler para toggle switches
+  const handleToggleChange = (setting, value) => {
+    setPrivacySettings(prev => ({
+      ...prev,
+      [setting]: value
+    }));
+  };
+
+  // Salvar configurações de privacidade
+  const handleSavePrivacySettings = async () => {
+    setLoading(true);
+    setMessage("");
+    
+    try {
+      const token = localStorage.getItem("authToken");
+      const response = await fetch("http://localhost:8080/api/users/privacy-settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(privacySettings)
+      });
+
+      if (response.ok) {
+        setMessage("Configurações salvas com sucesso!");
+      } else {
+        setMessage("Erro ao salvar configurações");
+      }
+    } catch (error) {
+      console.error("Erro:", error);
+      setMessage("Erro ao conectar com o servidor");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Excluir conta
+  const handleDeleteAccount = async () => {
+    if (window.confirm("Tem certeza que deseja excluir sua conta? Esta ação é irreversível e todos os seus dados serão perdidos.")) {
+      try {
+        const token = localStorage.getItem("authToken");
+        const response = await fetch("http://localhost:8080/api/users/account", {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          localStorage.removeItem("authToken");
+          window.location.href = "/login";
+        } else {
+          setMessage("Erro ao excluir conta");
+        }
+      } catch (error) {
+        console.error("Erro:", error);
+        setMessage("Erro ao conectar com o servidor");
+      }
+    }
+  };
+
+  // Exportar dados
+  const handleExportData = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      const response = await fetch("http://localhost:8080/api/users/export-data", {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "serenecare-dados.zip";
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+    } catch (error) {
+      console.error("Erro:", error);
+      setMessage("Erro ao exportar dados");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1F1F33] to-[#363645] pt-20 pb-12">
@@ -168,6 +303,17 @@ export default function SettingsPage() {
               <div className="bg-[#29293E] rounded-2xl p-6 border border-[#5F5F70]">
                 <h2 className="text-xl font-semibold text-[#EAEAFB] mb-6">Privacidade</h2>
                 
+                {/* Mensagem de status */}
+                {message && (
+                  <div className={`p-4 rounded-lg mb-6 ${
+                    message.includes("sucesso") 
+                      ? "bg-green-500/20 border border-green-500 text-green-400" 
+                      : "bg-red-500/20 border border-red-500 text-red-400"
+                  }`}>
+                    {message}
+                  </div>
+                )}
+                
                 <div className="space-y-6">
                   {/* Visibilidade do Perfil */}
                   <div className="bg-[#1F1F33] rounded-xl p-6 border border-[#5F5F70]">
@@ -184,11 +330,16 @@ export default function SettingsPage() {
                             { value: "contacts", label: "Apenas Contatos", description: "Somente seus contatos podem ver seu perfil" },
                             { value: "private", label: "Privado", description: "Apenas você pode ver seu perfil" }
                           ].map((option) => (
-                            <label key={option.value} className="flex items-start gap-3 p-3 rounded-lg border border-[#5F5F70] hover:border-[#6666C4] transition-all cursor-pointer">
+                            <label 
+                              key={option.value} 
+                              className="flex items-start gap-3 p-3 rounded-lg border border-[#5F5F70] hover:border-[#6666C4] transition-all cursor-pointer"
+                            >
                               <input
                                 type="radio"
                                 name="profileVisibility"
                                 value={option.value}
+                                checked={privacySettings.profileVisibility === option.value}
+                                onChange={(e) => handleProfileVisibilityChange(e.target.value)}
                                 className="mt-1 text-[#6666C4] focus:ring-[#6666C4]"
                               />
                               <div>
@@ -234,12 +385,34 @@ export default function SettingsPage() {
                             <div className="text-sm text-[#A5A5D6]">{setting.description}</div>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" className="sr-only peer" defaultChecked />
+                            <input 
+                              type="checkbox" 
+                              className="sr-only peer" 
+                              checked={privacySettings[setting.id]}
+                              onChange={(e) => handleToggleChange(setting.id, e.target.checked)}
+                            />
                             <div className="w-11 h-6 bg-[#5F5F70] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#6666C4]"></div>
                           </label>
                         </div>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Botão Salvar */}
+                  <div className="flex justify-end">
+                    <motion.button
+                      onClick={handleSavePrivacySettings}
+                      disabled={loading}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className={`px-8 py-3 rounded-lg font-semibold transition-all ${
+                        loading 
+                          ? "bg-gray-600 cursor-not-allowed" 
+                          : "bg-gradient-to-r from-[#6666C4] to-[#5454F0] hover:from-[#5454F0] hover:to-[#6666C4]"
+                      } text-white`}
+                    >
+                      {loading ? "Salvando..." : "Salvar Configurações"}
+                    </motion.button>
                   </div>
 
                   {/* Excluir Dados */}
@@ -252,6 +425,7 @@ export default function SettingsPage() {
                       
                       <div className="flex flex-col sm:flex-row gap-4">
                         <motion.button
+                          onClick={handleDeleteAccount}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-all"
@@ -260,6 +434,7 @@ export default function SettingsPage() {
                         </motion.button>
                         
                         <motion.button
+                          onClick={handleExportData}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           className="px-6 py-3 bg-[#6666C4] hover:bg-[#5454F0] text-white rounded-lg font-semibold transition-all"

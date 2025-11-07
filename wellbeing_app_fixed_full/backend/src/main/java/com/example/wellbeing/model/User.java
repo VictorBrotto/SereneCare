@@ -53,6 +53,22 @@ public class User {
     @Column(name = "profile_image_url", columnDefinition = "TEXT")
     private String profileImageUrl; // URL da imagem
 
+    // ✅ NOVOS CAMPOS: Configurações de Privacidade
+    @Column(name = "profile_visibility", length = 20)
+    private String profileVisibility = "public"; // public, contacts, private
+
+    @Column(name = "show_online_status")
+    private Boolean showOnlineStatus = true;
+
+    @Column(name = "allow_messages")
+    private Boolean allowMessages = true;
+
+    @Column(name = "show_activity")
+    private Boolean showActivity = true;
+
+    @Column(name = "data_collection")
+    private Boolean dataCollection = false;
+
     // Construtores
     public User() {}
 
@@ -108,10 +124,25 @@ public class User {
     public Integer getReviewCount() { return reviewCount; }
     public void setReviewCount(Integer reviewCount) { this.reviewCount = reviewCount; }
 
-    // ✅ NOVOS GETTERS E SETTERS PARA FOTO DE PERFIL
     public String getProfileImage() { return profileImage; }
     public void setProfileImage(String profileImage) { this.profileImage = profileImage; }
 
     public String getProfileImageUrl() { return profileImageUrl; }
     public void setProfileImageUrl(String profileImageUrl) { this.profileImageUrl = profileImageUrl; }
+
+    // ✅ NOVOS GETTERS E SETTERS PARA PRIVACIDADE
+    public String getProfileVisibility() { return profileVisibility; }
+    public void setProfileVisibility(String profileVisibility) { this.profileVisibility = profileVisibility; }
+
+    public Boolean getShowOnlineStatus() { return showOnlineStatus; }
+    public void setShowOnlineStatus(Boolean showOnlineStatus) { this.showOnlineStatus = showOnlineStatus; }
+
+    public Boolean getAllowMessages() { return allowMessages; }
+    public void setAllowMessages(Boolean allowMessages) { this.allowMessages = allowMessages; }
+
+    public Boolean getShowActivity() { return showActivity; }
+    public void setShowActivity(Boolean showActivity) { this.showActivity = showActivity; }
+
+    public Boolean getDataCollection() { return dataCollection; }
+    public void setDataCollection(Boolean dataCollection) { this.dataCollection = dataCollection; }
 }
