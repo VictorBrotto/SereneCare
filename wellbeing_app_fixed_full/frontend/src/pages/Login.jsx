@@ -167,7 +167,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-[#A5A5D6] hover:text-[#EAEAFB] transition-colors"
+                className="absolute right-3 top-4 text-[#A5A5D6] hover:text-[#404057] transition-colors"
                 disabled={isLoggingIn}
               >
                 {showPassword ? (
