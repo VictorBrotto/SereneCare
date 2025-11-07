@@ -10,23 +10,42 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/daily")
+@CrossOrigin(origins = "http://localhost:5173") // ✅ ADICIONAR CORS
 public class DailyLogController {
 
     @Autowired
     private DailyLogService service;
 
     @GetMapping
-    public List<DailyLog> list() { return service.findAll(); }
+    public List<DailyLog> list() { 
+        System.out.println("📋 Buscando todos os registros daily...");
+        List<DailyLog> logs = service.findAll();
+        System.out.println("✅ Encontrados " + logs.size() + " registros");
+        return logs; 
+    }
 
     @GetMapping("/{id}")
-    public DailyLog get(@PathVariable Long id) { return service.findById(id); }
+    public DailyLog get(@PathVariable Long id) { 
+        System.out.println("🔍 Buscando daily log com ID: " + id);
+        return service.findById(id); 
+    }
 
     @PostMapping
-    public DailyLog create(@RequestBody DailyLogDTO dto) { return service.save(dto); }
+    public DailyLog create(@RequestBody DailyLogDTO dto) { 
+        System.out.println("📝 Criando novo daily log para usuário: " + dto.userId);
+        System.out.println("📊 Dados - Dor: " + dto.painLevel + ", Sono: " + dto.sleepQuality + ", Humor: " + dto.mood);
+        return service.save(dto); 
+    }
 
     @PutMapping("/{id}")
-    public DailyLog update(@PathVariable Long id, @RequestBody DailyLogDTO dto) { return service.update(id, dto); }
+    public DailyLog update(@PathVariable Long id, @RequestBody DailyLogDTO dto) { 
+        System.out.println("✏️ Atualizando daily log ID: " + id);
+        return service.update(id, dto); 
+    }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) { service.delete(id); }
+    public void delete(@PathVariable Long id) { 
+        System.out.println("🗑️ Deletando daily log ID: " + id);
+        service.delete(id); 
+    }
 }

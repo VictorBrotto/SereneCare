@@ -11,12 +11,24 @@ export default function History() {
     const fetchEntries = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get("http://localhost:8080/api/entries", {
+        const userId = parseInt(localStorage.getItem("userId"));
+        
+        console.log("🔍 Buscando histórico para usuário:", userId);
+        
+        // ✅ CORREÇÃO: Buscar todos os registros
+        const res = await axios.get("http://localhost:8080/api/daily", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setEntries(res.data.reverse());
+        
+        console.log("📋 Todos os registros recebidos:", res.data);
+        
+        // ✅ CORREÇÃO: Mostrar todos os registros (sem filtro por usuário temporariamente)
+        const allEntries = res.data;
+        console.log("👤 Registros para exibir:", allEntries);
+        
+        setEntries(allEntries.reverse());
       } catch (err) {
-        console.error(err);
+        console.error("❌ Erro ao buscar registros:", err);
       } finally {
         setLoading(false);
       }
@@ -101,7 +113,7 @@ export default function History() {
                     className="text-[#EAEAFB] font-semibold text-lg"
                     whileHover={{ color: "#6666C4" }}
                   >
-                    {new Date(entry.date).toLocaleDateString("pt-BR")}
+                    {new Date(entry.createdAt).toLocaleDateString("pt-BR")}
                   </motion.h2>
                   <span className="text-xs text-[#A5A5D6] bg-[#34344A] px-2 py-1 rounded-full">
                     Humor: {entry.mood || "-"}/10
@@ -128,14 +140,14 @@ export default function History() {
                   </motion.p>
                 </div>
 
-                {entry.notes && (
+                {entry.additionalNotes && (
                   <motion.p 
                     className="text-sm text-[#A5A5D6] italic mt-3 p-3 bg-[#1F1F33] rounded-lg border-l-4 border-[#6666C4]"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: index * 0.08 + 0.4 }}
                   >
-                    "{entry.notes}"
+                    "{entry.additionalNotes}"
                   </motion.p>
                 )}
               </motion.div>

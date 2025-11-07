@@ -195,7 +195,7 @@ export default function DailyForm() {
       const token = localStorage.getItem("token");
       const userId = localStorage.getItem("userId");
       
-      // ✅ CORREÇÃO: Enviar dados no formato correto que o backend espera
+      // ✅ DADOS NO FORMATO CORRETO PARA O BACKEND
       const dailyLogData = {
         userId: parseInt(userId),
         painLevel: form.painLevel,

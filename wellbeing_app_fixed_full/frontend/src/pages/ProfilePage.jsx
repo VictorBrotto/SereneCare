@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -6,18 +6,21 @@ import {
   CameraIcon, 
   PencilIcon,
   CheckIcon,
-  XMarkIcon 
+  XMarkIcon,
+  TrashIcon
 } from "@heroicons/react/24/outline";
 import axios from "axios";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetchUserProfile();
@@ -70,6 +73,120 @@ export default function ProfilePage() {
       location: user.location || ""
     });
     setEditing(false);
+  };
+
+  // ✅ NOVA FUNÇÃO: Upload de imagem
+  const handleImageUpload = async (file) => {
+    setUploading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const userId = localStorage.getItem("userId");
+      
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await axios.post(
+        `http://localhost:8080/api/users/${userId}/profile-image-upload`,
+        formData,
+        {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+
+      setUser(res.data);
+      setMessage("Foto de perfil atualizada com sucesso!");
+      setTimeout(() => setMessage(""), 3000);
+    } catch (err) {
+      console.error("Erro ao fazer upload da imagem", err);
+      setMessage("Erro ao fazer upload da imagem");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // ✅ NOVA FUNÇÃO: Remover imagem
+  const handleRemoveImage = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const userId = localStorage.getItem("userId");
+      
+      await axios.delete(`http://localhost:8080/api/users/${userId}/profile-image`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setUser(prev => ({ ...prev, profileImage: null, profileImageUrl: null }));
+      setMessage("Foto de perfil removida com sucesso!");
+      setTimeout(() => setMessage(""), 3000);
+    } catch (err) {
+      console.error("Erro ao remover imagem", err);
+      setMessage("Erro ao remover foto de perfil");
+    }
+  };
+
+  // ✅ NOVA FUNÇÃO: Clique no botão de câmera
+  const handleCameraClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  // ✅ NOVA FUNÇÃO: Processar arquivo selecionado
+  const handleFileSelect = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Validar tipo de arquivo
+      if (!file.type.startsWith('image/')) {
+        setMessage("Por favor, selecione apenas arquivos de imagem");
+        setTimeout(() => setMessage(""), 3000);
+        return;
+      }
+
+      // Validar tamanho (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setMessage("A imagem deve ter no máximo 5MB");
+        setTimeout(() => setMessage(""), 3000);
+        return;
+      }
+
+      handleImageUpload(file);
+    }
+    // Limpar input
+    event.target.value = '';
+  };
+
+  // ✅ FUNÇÃO: Renderizar imagem do perfil
+  const renderProfileImage = () => {
+    if (user?.profileImage) {
+      // Se tem Base64 image
+      return (
+        <img 
+          src={user.profileImage} 
+          alt="Foto de perfil"
+          className="w-32 h-32 rounded-full object-cover border-4 border-[#6666C4]"
+        />
+      );
+    } else if (user?.profileImageUrl) {
+      // Se tem URL externa
+      return (
+        <img 
+          src={user.profileImageUrl} 
+          alt="Foto de perfil"
+          className="w-32 h-32 rounded-full object-cover border-4 border-[#6666C4]"
+        />
+      );
+    } else {
+      // Avatar com iniciais
+      const initials = user?.fullName 
+        ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase()
+        : 'U';
+      
+      return (
+        <div className="w-32 h-32 bg-gradient-to-br from-[#6666C4] to-[#5454F0] rounded-full flex items-center justify-center text-white font-bold text-2xl">
+          {initials}
+        </div>
+      );
+    }
   };
 
   if (loading) {
@@ -148,11 +265,24 @@ export default function ProfilePage() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400"
+            className={`mb-6 p-4 rounded-xl border ${
+              message.includes("Erro") 
+                ? "bg-red-500/10 border-red-500/20 text-red-400"
+                : "bg-green-500/10 border-green-500/20 text-green-400"
+            }`}
           >
             {message}
           </motion.div>
         )}
+
+        {/* Input de arquivo oculto */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileSelect}
+          accept="image/*"
+          className="hidden"
+        />
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -164,16 +294,39 @@ export default function ProfilePage() {
           <div className="lg:col-span-1">
             <div className="bg-[#29293E] rounded-2xl p-6 border border-[#5F5F70] text-center">
               <div className="relative inline-block">
-                <div className="w-32 h-32 bg-gradient-to-br from-[#6666C4] to-[#5454F0] rounded-full flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4">
-                  {user.fullName.split(' ').map(n => n[0]).join('')}
-                </div>
+                {renderProfileImage()}
+                
+                {/* Botão de Upload */}
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className="absolute bottom-2 right-2 bg-[#363645] p-2 rounded-full border border-[#5F5F70] hover:bg-[#5F5F70] transition-colors"
+                  onClick={handleCameraClick}
+                  disabled={uploading}
+                  className="absolute bottom-2 right-2 bg-[#363645] p-2 rounded-full border border-[#5F5F70] hover:bg-[#5F5F70] transition-colors disabled:opacity-50"
                 >
-                  <CameraIcon className="h-4 w-4 text-[#EAEAFB]" />
+                  {uploading ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-4 h-4 border-2 border-[#EAEAFB] border-t-transparent rounded-full"
+                    />
+                  ) : (
+                    <CameraIcon className="h-4 w-4 text-[#EAEAFB]" />
+                  )}
                 </motion.button>
+
+                {/* Botão de Remover (apenas se tiver imagem) */}
+                {(user?.profileImage || user?.profileImageUrl) && (
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={handleRemoveImage}
+                    className="absolute top-2 right-2 bg-red-500/80 p-2 rounded-full border border-red-400 hover:bg-red-500 transition-colors"
+                    title="Remover foto"
+                  >
+                    <TrashIcon className="h-3 w-3 text-white" />
+                  </motion.button>
+                )}
               </div>
               
               <h2 className="text-xl font-semibold text-[#EAEAFB] mb-2">
@@ -188,6 +341,7 @@ export default function ProfilePage() {
                   {user.especializacao}
                 </div>
               )}
+        
             </div>
           </div>
 

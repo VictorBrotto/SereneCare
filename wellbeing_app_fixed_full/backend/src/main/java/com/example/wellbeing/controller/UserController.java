@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -32,6 +33,17 @@ public class UserController {
     private String extractUsernameFromAuth(String authHeader) {
         String token = authHeader.replace("Bearer ", "");
         return jwtUtil.extractUsername(token);
+    }
+
+    // ✅ ENDPOINT QUE ESTAVA FALTANDO: Buscar todos os doutores
+    @GetMapping("/doctors")
+    public ResponseEntity<?> getAllDoctors() {
+        try {
+            List<User> doctors = userRepository.findByRoleIgnoreCase("DOCTOR");
+            return ResponseEntity.ok(doctors);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erro ao buscar doutores: " + e.getMessage());
+        }
     }
 
     // ✅ Buscar usuário por ID
