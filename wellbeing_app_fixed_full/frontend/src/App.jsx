@@ -79,6 +79,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          {/* CORREÇÃO: Rota de DoctorsList deve vir ANTES da rota dinâmica */}
           <Route
             path="/doctors"
             element={

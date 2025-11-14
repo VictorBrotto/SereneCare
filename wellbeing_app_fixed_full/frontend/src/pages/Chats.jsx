@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
-import { useParams, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
 
 export default function ChatsPage() {
@@ -15,6 +15,44 @@ export default function ChatsPage() {
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
   }, []);
+
+  // ✅ MELHORADO: Renderizar foto de perfil com fallback
+  const renderProfilePicture = (chat, size = "w-12 h-12") => {
+    const currentUserRole = localStorage.getItem("role");
+    let profilePicture, displayName;
+
+    if (currentUserRole === "DOCTOR") {
+      // Médico vê foto do paciente
+      profilePicture = chat.patientProfilePicture;
+      displayName = chat.patientName;
+    } else {
+      // Paciente vê foto do médico
+      profilePicture = chat.doctorProfilePicture;
+      displayName = chat.doctorName;
+    }
+
+    if (profilePicture) {
+      return (
+        <img 
+          src={profilePicture} 
+          alt={displayName}
+          className={`${size} rounded-full object-cover border border-[#34344A] mr-4 flex-shrink-0`}
+          onError={(e) => {
+            e.target.style.display = 'none';
+          }}
+        />
+      );
+    }
+    
+    // Fallback para iniciais
+    const initials = displayName ? displayName.split(' ').map(n => n[0]).join('').toUpperCase() : "C";
+    
+    return (
+      <div className={`${size} bg-gradient-to-br from-[#6666C4] to-[#5454F0] rounded-full flex items-center justify-center text-white font-bold text-lg mr-4 flex-shrink-0`}>
+        {initials.substring(0, 2)}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-[#1F1F33] via-[#2A2A44] to-[#363645] py-10 px-6">
@@ -89,13 +127,16 @@ export default function ChatsPage() {
                   to={`/chats/${chat.id}`} 
                   className="block bg-[#29293E] p-5 rounded-2xl hover:shadow-xl transition-all duration-300 border border-[#34344A]"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
+                  <div className="flex items-center">
+                    {/* ✅ FOTO DE PERFIL */}
+                    {renderProfilePicture(chat)}
+                    
+                    <div className="flex-1 min-w-0">
                       <motion.div 
-                        className="text-lg font-semibold text-[#EAEAFB] mb-1"
+                        className="text-lg font-semibold text-[#EAEAFB] mb-1 truncate"
                         whileHover={{ color: "#6666C4" }}
                       >
-                        {chat.title || (chat.patientName || chat.doctorName)}
+                        {localStorage.getItem("role") === "DOCTOR" ? chat.patientName : chat.doctorName}
                       </motion.div>
                       <motion.div 
                         className="text-sm text-[#A5A5D6] truncate"
@@ -106,8 +147,9 @@ export default function ChatsPage() {
                         {chat.lastMessage || "Sem mensagens"}
                       </motion.div>
                     </div>
+                    
                     <motion.div 
-                      className="text-xs text-[#CFCFE8] bg-[#34344A] px-3 py-1 rounded-full"
+                      className="text-xs text-[#CFCFE8] bg-[#34344A] px-3 py-1 rounded-full ml-4 flex-shrink-0"
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: index * 0.1 + 0.4 }}

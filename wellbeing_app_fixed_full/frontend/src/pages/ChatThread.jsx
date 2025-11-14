@@ -11,45 +11,93 @@ export default function ChatThread() {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(false);
+  const [statusLoading, setStatusLoading] = useState(true);
   const messagesEndRef = useRef();
+  const messagesContainerRef = useRef();
   
   const currentUser = {
     id: parseInt(localStorage.getItem("userId")),
     role: localStorage.getItem("role"),
-    username: localStorage.getItem("username")
+    username: localStorage.getItem("username"),
+    profilePicture: localStorage.getItem("profilePicture")
   };
 
   useEffect(() => {
     fetchChatData();
+    // Atualizar próprio status como online
+    updateOwnStatus();
   }, [id]);
+
+  // ✅ ATUALIZADO: Buscar status online do backend
+  const fetchUserStatus = async (userId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`http://localhost:8080/api/users/${userId}/status`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data.online;
+    } catch (error) {
+      console.error("Erro ao buscar status:", error);
+      return false;
+    }
+  };
+
+  // ✅ NOVO: Atualizar próprio status
+  const updateOwnStatus = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post("http://localhost:8080/api/users/update-last-seen", {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
+    }
+  };
 
   const fetchChatData = async () => {
     setLoading(true);
+    setStatusLoading(true);
     try {
       const token = localStorage.getItem("token");
       
-      // Buscar informações do chat e mensagens em paralelo
-      const [infoRes, messagesRes] = await Promise.all([
-        axios.get(`http://localhost:8080/api/chats/${id}/info`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get(`http://localhost:8080/api/chats/${id}/messages`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-      ]);
+      // Buscar informações do chat
+      const infoRes = await axios.get(`http://localhost:8080/api/chats/${id}/info`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
       setChatInfo(infoRes.data);
+      
+      // Buscar mensagens
+      const messagesRes = await axios.get(`http://localhost:8080/api/chats/${id}/messages`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
       setMessages(messagesRes.data || []);
+      
+      // ✅ BUSCAR STATUS ONLINE do outro usuário
+      if (infoRes.data.otherUserId) {
+        const onlineStatus = await fetchUserStatus(infoRes.data.otherUserId);
+        setIsOnline(onlineStatus);
+      }
+      
     } catch (err) {
       console.error("Erro ao buscar dados do chat", err);
     } finally {
       setLoading(false);
+      setStatusLoading(false);
     }
   };
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollToBottom();
   }, [messages]);
+
+  const scrollToBottom = () => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  };
 
   const send = async () => {
     if (!text.trim() || sending) return;
@@ -57,12 +105,14 @@ export default function ChatThread() {
     setSending(true);
     const token = localStorage.getItem("token");
     try {
+      // Atualizar status como online ao enviar mensagem
+      await updateOwnStatus();
+      
       const res = await axios.post(`http://localhost:8080/api/chats/${id}/message`, 
         { content: text }, 
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      // Adicionar a nova mensagem à lista
       setMessages(prev => [...prev, res.data]);
       setText("");
     } catch (err) {
@@ -92,6 +142,35 @@ export default function ChatThread() {
     });
   };
 
+  // ✅ MELHORADO: Renderizar foto de perfil com fallback
+  const renderProfilePicture = (user, size = "w-8 h-8") => {
+    const profilePicture = user?.profilePicture || user?.senderProfilePicture;
+    
+    if (profilePicture) {
+      return (
+        <img 
+          src={profilePicture} 
+          alt={user?.username || user?.senderName || "Usuário"}
+          className={`${size} rounded-full object-cover border border-[#5F5F70] flex-shrink-0`}
+          onError={(e) => {
+            // Fallback para inicial se a imagem não carregar
+            e.target.style.display = 'none';
+          }}
+        />
+      );
+    }
+    
+    // Fallback para iniciais
+    const displayName = user?.username || user?.senderName || user?.fullName || "U";
+    const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase();
+    
+    return (
+      <div className={`${size} bg-gradient-to-br from-[#6666C4] to-[#5454F0] rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
+        {initials.substring(0, 2)}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1F1F33] to-[#363645]">
@@ -107,105 +186,149 @@ export default function ChatThread() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1F1F33] to-[#363645] pt-20 pb-8">
       <div className="max-w-4xl mx-auto px-6 h-[calc(100vh-8rem)] flex flex-col">
-        {/* Chat Header */}
+        
+        {/* Header com Status Online Real */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[#29293E] rounded-2xl p-6 mb-6 border border-[#5F5F70] shadow-lg"
+          className="bg-[#29293E] rounded-2xl p-4 mb-4 border border-[#5F5F70] shadow-lg flex-shrink-0"
         >
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-[#6666C4] to-[#5454F0] rounded-full flex items-center justify-center text-white font-bold text-lg">
-              {chatInfo?.otherUserName?.[0] || "U"}
+            <div className="relative">
+              {renderProfilePicture(
+                { 
+                  profilePicture: chatInfo?.otherUserProfilePicture,
+                  fullName: chatInfo?.otherUserName 
+                }, 
+                "w-12 h-12"
+              )}
             </div>
+            
             <div className="flex-1">
-              <h1 className="text-xl font-semibold text-[#EAEAFB]">
+              <h1 className="text-lg font-semibold text-[#EAEAFB]">
                 {chatInfo?.otherUserName || "Conversa"}
               </h1>
-              <p className="text-sm text-[#A5A5D6]">
+              <p className="text-xs text-[#A5A5D6]">
                 {currentUser.role === "DOCTOR" ? "Paciente" : "Doutor"}
                 {chatInfo?.otherUserSpecialization && ` • ${chatInfo.otherUserSpecialization}`}
               </p>
             </div>
+            
             <div className="text-right">
               <div className="text-xs text-[#A5A5D6] mb-1">Status</div>
               <div className="flex items-center gap-2 justify-end">
-                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                <span className="text-sm text-[#CFCFE8]">Online</span>
+                {statusLoading ? (
+                  <motion.div
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                    className="w-2 h-2 bg-gray-400 rounded-full"
+                  />
+                ) : (
+                  <motion.div 
+                    className={`w-2 h-2 rounded-full ${
+                      isOnline ? "bg-green-400" : "bg-gray-400"
+                    }`}
+                    animate={{ 
+                      scale: isOnline ? [1, 1.2, 1] : 1,
+                      opacity: isOnline ? [1, 0.7, 1] : 1
+                    }}
+                    transition={{ 
+                      duration: 2, 
+                      repeat: isOnline ? Infinity : 0,
+                      ease: "easeInOut"
+                    }}
+                  />
+                )}
+                <span className="text-sm text-[#CFCFE8]">
+                  {statusLoading ? "Carregando..." : (isOnline ? "Online" : "Offline")}
+                </span>
               </div>
             </div>
           </div>
         </motion.div>
 
-        {/* Messages Container */}
+        {/* Card Principal do Chat */}
         <motion.div
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="flex-1 bg-[#29293E] rounded-2xl p-6 shadow-2xl border border-[#5F5F70] flex flex-col"
+          className="flex-1 bg-[#29293E] rounded-2xl p-5 shadow-2xl border border-[#5F5F70] flex flex-col min-h-0"
         >
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-[#1F1F33] rounded-xl mb-6">
+          {/* Área de Mensagens */}
+          <div 
+            ref={messagesContainerRef}
+            className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#1F1F33] rounded-xl mb-4 custom-scrollbar"
+          >
             <AnimatePresence>
               {messages.length === 0 ? (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-center py-12 text-[#A5A5D6]"
+                  className="text-center py-12 text-[#A5A5D6] h-full flex flex-col justify-center"
                 >
-                  <div className="text-6xl mb-4">💬</div>
-                  <p>Nenhuma mensagem ainda</p>
-                  <p className="text-sm mt-2">Seja o primeiro a enviar uma mensagem!</p>
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="text-4xl mb-3"
+                  >
+                    💬
+                  </motion.div>
+                  <p className="text-sm">Nenhuma mensagem ainda</p>
+                  <p className="text-xs mt-1">Seja o primeiro a enviar uma mensagem!</p>
                 </motion.div>
               ) : (
                 messages.map((message, index) => (
                   <motion.div
                     key={message.id}
-                    initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ 
-                      duration: 0.4,
-                      delay: index * 0.05 
+                      duration: 0.3,
+                      delay: index * 0.02
                     }}
                     className={`flex ${isCurrentUserMessage(message) ? "justify-end" : "justify-start"}`}
                   >
                     <motion.div
-                      whileHover={{ scale: 1.02 }}
-                      className={`max-w-[70%] ${isCurrentUserMessage(message) ? "order-2" : "order-1"}`}
+                      whileHover={{ scale: 1.01 }}
+                      className={`max-w-[80%] ${isCurrentUserMessage(message) ? "order-2" : "order-1"}`}
                     >
-                      {/* Nome do remetente (apenas para mensagens de outros) */}
                       {!isCurrentUserMessage(message) && (
                         <div className="text-xs text-[#6666C4] font-medium mb-1 ml-1">
                           {message.senderName || "Usuário"}
                         </div>
                       )}
                       
-                      {/* Container da mensagem */}
                       <div className="flex items-end gap-2">
                         {!isCurrentUserMessage(message) && (
-                          <div className="w-8 h-8 bg-gradient-to-br from-[#6666C4] to-[#5454F0] rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                            {message.senderName?.[0] || "U"}
+                          <div className="flex-shrink-0">
+                            {renderProfilePicture(message)}
                           </div>
                         )}
                         
-                        <div className={`p-4 rounded-2xl shadow-lg ${
-                          isCurrentUserMessage(message) 
-                            ? "bg-gradient-to-r from-[#6666C4] to-[#5454F0] text-white rounded-br-none" 
-                            : "bg-[#363645] text-[#EAEAFB] rounded-bl-none border border-[#5F5F70]"
-                        }`}>
-                          <div className="text-[#EAEAFB] whitespace-pre-wrap break-words">
+                        <motion.div 
+                          className={`p-3 rounded-2xl shadow-lg ${
+                            isCurrentUserMessage(message) 
+                              ? "bg-gradient-to-r from-[#6666C4] to-[#5454F0] text-white rounded-br-none" 
+                              : "bg-[#363645] text-[#EAEAFB] rounded-bl-none border border-[#5F5F70]"
+                          }`}
+                          whileHover={{ 
+                            y: -1,
+                            transition: { duration: 0.1 }
+                          }}
+                        >
+                          <div className="text-[#EAEAFB] whitespace-pre-wrap break-words text-sm">
                             {message.content}
                           </div>
-                        </div>
+                        </motion.div>
 
                         {isCurrentUserMessage(message) && (
-                          <div className="w-8 h-8 bg-gradient-to-br from-[#6666C4] to-[#5454F0] rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                            {currentUser.username?.[0] || "V"}
+                          <div className="flex-shrink-0">
+                            {renderProfilePicture(currentUser)}
                           </div>
                         )}
                       </div>
 
-                      {/* Timestamp */}
                       <div className={`text-xs text-[#A5A5D6] mt-1 ${
                         isCurrentUserMessage(message) ? "text-right mr-1" : "ml-1"
                       }`}>
@@ -219,12 +342,12 @@ export default function ChatThread() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Area */}
+          {/* Área de Input */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="flex gap-3 items-end"
+            className="flex gap-3 items-end flex-shrink-0"
           >
             <motion.textarea
               value={text}
@@ -232,7 +355,7 @@ export default function ChatThread() {
               onKeyPress={handleKeyPress}
               whileFocus={{ scale: 1.02 }}
               placeholder="Digite sua mensagem..."
-              className="flex-1 p-4 rounded-xl bg-[#1F1F33] text-[#EAEAFB] outline-none resize-none min-h-[60px] max-h-[120px] focus:ring-2 focus:ring-[#6666C4] border border-[#5F5F70] focus:border-[#6666C4] transition-all"
+              className="flex-1 p-3 rounded-xl bg-[#1F1F33] text-[#EAEAFB] outline-none resize-none min-h-[50px] max-h-[100px] focus:ring-2 focus:ring-[#6666C4] border border-[#5F5F70] focus:border-[#6666C4] transition-all text-sm"
               rows="1"
             />
             <motion.button
@@ -242,16 +365,16 @@ export default function ChatThread() {
                 scale: text.trim() && !sending ? 1.05 : 1,
               }}
               whileTap={{ scale: 0.95 }}
-              className="bg-gradient-to-r from-[#6666C4] to-[#5454F0] text-white p-4 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              className="bg-gradient-to-r from-[#6666C4] to-[#5454F0] text-white p-3 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex-shrink-0"
             >
               {sending ? (
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                  className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
                 />
               ) : (
-                <PaperAirplaneIcon className="h-5 w-5" />
+                <PaperAirplaneIcon className="h-4 w-4" />
               )}
             </motion.button>
           </motion.div>

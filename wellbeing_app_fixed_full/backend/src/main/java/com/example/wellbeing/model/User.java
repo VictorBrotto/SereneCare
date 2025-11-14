@@ -2,6 +2,7 @@ package com.example.wellbeing.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "users")
@@ -29,6 +30,10 @@ public class User {
     @Column(name="created_at", nullable=false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    // ✅ NOVO: Campo para último acesso (status online)
+    @Column(name = "last_seen")
+    private Instant lastSeen = Instant.now();
+
     // Campos específicos para DOCTOR
     private String especializacao;
     private String crm;
@@ -46,16 +51,13 @@ public class User {
     @Column(name = "review_count")
     private Integer reviewCount = 0;
 
-    // ✅ NOVO: Campos para foto de perfil
-    @Column(name = "profile_image", columnDefinition = "TEXT")
-    private String profileImage; // Base64 ou caminho do arquivo
-
-    @Column(name = "profile_image_url", columnDefinition = "TEXT")
-    private String profileImageUrl; // URL da imagem
+    // ✅ CORREÇÃO: Campo único para foto de perfil
+    @Column(name = "profile_picture", columnDefinition = "TEXT")
+    private String profilePicture;
 
     // ✅ NOVOS CAMPOS: Configurações de Privacidade
     @Column(name = "profile_visibility", length = 20)
-    private String profileVisibility = "public"; // public, contacts, private
+    private String profileVisibility = "public";
 
     @Column(name = "show_online_status")
     private Boolean showOnlineStatus = true;
@@ -79,6 +81,7 @@ public class User {
         this.fullName = fullName;
         this.role = role;
         this.createdAt = LocalDateTime.now();
+        this.lastSeen = Instant.now();
     }
 
     // Getters e Setters
@@ -103,6 +106,10 @@ public class User {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
+    // ✅ NOVO: Getter e Setter para lastSeen
+    public Instant getLastSeen() { return lastSeen; }
+    public void setLastSeen(Instant lastSeen) { this.lastSeen = lastSeen; }
+
     public String getEspecializacao() { return especializacao; }
     public void setEspecializacao(String especializacao) { this.especializacao = especializacao; }
 
@@ -124,13 +131,11 @@ public class User {
     public Integer getReviewCount() { return reviewCount; }
     public void setReviewCount(Integer reviewCount) { this.reviewCount = reviewCount; }
 
-    public String getProfileImage() { return profileImage; }
-    public void setProfileImage(String profileImage) { this.profileImage = profileImage; }
+    // ✅ CORREÇÃO: Usar apenas profilePicture
+    public String getProfilePicture() { return profilePicture; }
+    public void setProfilePicture(String profilePicture) { this.profilePicture = profilePicture; }
 
-    public String getProfileImageUrl() { return profileImageUrl; }
-    public void setProfileImageUrl(String profileImageUrl) { this.profileImageUrl = profileImageUrl; }
-
-    // ✅ NOVOS GETTERS E SETTERS PARA PRIVACIDADE
+    // Configurações de privacidade
     public String getProfileVisibility() { return profileVisibility; }
     public void setProfileVisibility(String profileVisibility) { this.profileVisibility = profileVisibility; }
 
@@ -145,4 +150,13 @@ public class User {
 
     public Boolean getDataCollection() { return dataCollection; }
     public void setDataCollection(Boolean dataCollection) { this.dataCollection = dataCollection; }
+
+    // ✅ NOVO: Método para verificar se está online
+    public boolean isOnline() {
+        if (lastSeen == null) return false;
+        if (!Boolean.TRUE.equals(showOnlineStatus)) return false;
+        
+        Instant fiveMinutesAgo = Instant.now().minusSeconds(300); // 5 minutos
+        return lastSeen.isAfter(fiveMinutesAgo);
+    }
 }

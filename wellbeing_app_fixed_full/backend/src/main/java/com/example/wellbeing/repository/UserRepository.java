@@ -16,8 +16,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByRoleIgnoreCase(String role);
     
-    @Query("SELECT u FROM User u WHERE u.role = 'DOCTOR' AND u.especializacao = :especializacao")
-    List<User> findDoctorsBySpecialization(@Param("especializacao") String especializacao);
+    @Query("SELECT u FROM User u WHERE u.role = 'DOCTOR' AND u.especializacao = :specialization")
+    List<User> findDoctorsBySpecialization(String specialization);
     
     @Query("SELECT u FROM User u WHERE u.role = 'DOCTOR' AND u.location LIKE %:location%")
     List<User> findDoctorsByLocation(@Param("location") String location);

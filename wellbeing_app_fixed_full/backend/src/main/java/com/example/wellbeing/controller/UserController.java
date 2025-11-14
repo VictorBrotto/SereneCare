@@ -16,7 +16,6 @@ import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-// ✅ IMPORT CORRETO para HttpServletResponse
 import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
@@ -35,7 +34,79 @@ public class UserController {
         return jwtUtil.extractUsername(token);
     }
 
-    // ✅ ENDPOINT QUE ESTAVA FALTANDO: Buscar todos os doutores
+    // ✅ ENDPOINT CORRIGIDO: Buscar especializações dos médicos
+    @GetMapping("/doctors/specializations")
+    public ResponseEntity<?> getDoctorSpecializations() {
+        try {
+            List<String> specializations = userRepository.findDistinctSpecializations();
+            return ResponseEntity.ok(specializations);
+        } catch (Exception e) {
+            // Fallback para especialidades padrão
+            List<String> defaultSpecializations = List.of("Cardiologia", "Dermatologia", "Psiquiatria", "Pediatria", "Ortopedia");
+            return ResponseEntity.ok(defaultSpecializations);
+        }
+    }
+
+    // ✅ ENDPOINT CORRIGIDO: Buscar médico por ID
+    @GetMapping("/doctors/{id}")
+    public ResponseEntity<?> getDoctorById(@PathVariable Long id) {
+        try {
+            Optional<User> doctor = userRepository.findById(id)
+                    .filter(user -> "DOCTOR".equalsIgnoreCase(user.getRole()));
+            
+            if (doctor.isPresent()) {
+                return ResponseEntity.ok(doctor.get());
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erro ao buscar médico: " + e.getMessage());
+        }
+    }
+
+    // ✅ ENDPOINT: Atualizar último acesso (status online)
+    @PostMapping("/update-last-seen")
+    public ResponseEntity<?> updateLastSeen(@RequestHeader("Authorization") String authHeader) {
+        try {
+            String username = extractUsernameFromAuth(authHeader);
+            Optional<User> userOpt = userRepository.findByUsername(username);
+            
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                user.setLastSeen(java.time.Instant.now());
+                userRepository.save(user);
+                return ResponseEntity.ok().build();
+            }
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erro ao atualizar último acesso: " + e.getMessage());
+        }
+    }
+
+    // ✅ ENDPOINT: Verificar status online de um usuário
+    @GetMapping("/{userId}/status")
+    public ResponseEntity<?> getUserStatus(@PathVariable Long userId) {
+        try {
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            User user = userOpt.get();
+            boolean isOnline = user.isOnline();
+            
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("online", isOnline);
+            response.put("lastSeen", user.getLastSeen());
+            response.put("showOnlineStatus", user.getShowOnlineStatus());
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erro ao verificar status: " + e.getMessage());
+        }
+    }
+
+    // ✅ ENDPOINT: Buscar todos os doutores
     @GetMapping("/doctors")
     public ResponseEntity<?> getAllDoctors() {
         try {
@@ -61,7 +132,7 @@ public class UserController {
         }
     }
 
-    // ✅ NOVO ENDPOINT: Buscar perfil do usuário autenticado
+    // ✅ ENDPOINT: Buscar perfil do usuário autenticado
     @GetMapping("/profile")
     public ResponseEntity<?> getUserProfile(@RequestHeader("Authorization") String authHeader) {
         try {
@@ -78,7 +149,138 @@ public class UserController {
         }
     }
 
-    // ✅ NOVO ENDPOINT: Atualizar configurações de privacidade
+    // ✅ ENDPOINT CORRIGIDO: Upload de foto de perfil (Multipart)
+    @PostMapping("/{id}/profile-picture")
+    public ResponseEntity<?> uploadProfilePicture(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            Optional<User> userOpt = userRepository.findById(id);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Validar tipo de arquivo
+            if (!file.getContentType().startsWith("image/")) {
+                return ResponseEntity.badRequest().body("Apenas arquivos de imagem são permitidos");
+            }
+
+            // Validar tamanho (máximo 5MB)
+            if (file.getSize() > 5 * 1024 * 1024) {
+                return ResponseEntity.badRequest().body("A imagem deve ter no máximo 5MB");
+            }
+
+            User user = userOpt.get();
+            
+            // Converter para Base64
+            String base64Image = "data:" + file.getContentType() + ";base64," + 
+                Base64.getEncoder().encodeToString(file.getBytes());
+            
+            user.setProfilePicture(base64Image);
+
+            User savedUser = userRepository.save(user);
+            return ResponseEntity.ok(savedUser);
+
+        } catch (IOException e) {
+            return ResponseEntity.badRequest().body("Erro ao processar a imagem: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erro ao fazer upload da imagem: " + e.getMessage());
+        }
+    }
+
+    // ✅ ENDPOINT ALTERNATIVO: Upload de foto de perfil via Base64
+    @PostMapping("/{id}/profile-picture-base64")
+    public ResponseEntity<?> uploadProfilePictureBase64(
+            @PathVariable Long id,
+            @RequestBody ProfilePictureRequest request,
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            Optional<User> userOpt = userRepository.findById(id);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            User user = userOpt.get();
+            
+            // Validar se é Base64
+            if (request.getProfilePicture() != null && request.getProfilePicture().startsWith("data:image")) {
+                user.setProfilePicture(request.getProfilePicture());
+            } else {
+                return ResponseEntity.badRequest().body("Dados de imagem inválidos");
+            }
+
+            User savedUser = userRepository.save(user);
+            return ResponseEntity.ok(savedUser);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erro ao atualizar foto de perfil: " + e.getMessage());
+        }
+    }
+
+    // ✅ Remover foto de perfil
+    @DeleteMapping("/{id}/profile-picture")
+    public ResponseEntity<?> removeProfilePicture(@PathVariable Long id, @RequestHeader("Authorization") String authHeader) {
+        try {
+            Optional<User> userOpt = userRepository.findById(id);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            User user = userOpt.get();
+            user.setProfilePicture(null);
+
+            User savedUser = userRepository.save(user);
+            return ResponseEntity.ok(savedUser);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erro ao remover foto de perfil: " + e.getMessage());
+        }
+    }
+
+    // ✅ Atualizar perfil do usuário
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody UpdateUserRequest request, @RequestHeader("Authorization") String authHeader) {
+        try {
+            Optional<User> userOpt = userRepository.findById(id);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            User user = userOpt.get();
+            
+            // Atualizar campos permitidos
+            if (request.getFullName() != null) {
+                user.setFullName(request.getFullName());
+            }
+            if (request.getBio() != null) {
+                user.setBio(request.getBio());
+            }
+            if (request.getLocation() != null) {
+                user.setLocation(request.getLocation());
+            }
+            // Campos específicos de médico
+            if ("DOCTOR".equals(user.getRole())) {
+                if (request.getExperienceYears() != null) {
+                    user.setExperienceYears(request.getExperienceYears());
+                }
+                if (request.getEspecializacao() != null) {
+                    user.setEspecializacao(request.getEspecializacao());
+                }
+                if (request.getCrm() != null) {
+                    user.setCrm(request.getCrm());
+                }
+            }
+
+            User savedUser = userRepository.save(user);
+            return ResponseEntity.ok(savedUser);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erro ao atualizar usuário: " + e.getMessage());
+        }
+    }
+
+    // ✅ ENDPOINTS DE PRIVACIDADE
     @PutMapping("/privacy-settings")
     public ResponseEntity<?> updatePrivacySettings(
             @RequestBody PrivacySettingsRequest request,
@@ -93,7 +295,6 @@ public class UserController {
 
             User user = userOpt.get();
             
-            // Atualizar configurações de privacidade
             if (request.getProfileVisibility() != null) {
                 user.setProfileVisibility(request.getProfileVisibility());
             }
@@ -118,7 +319,6 @@ public class UserController {
         }
     }
 
-    // ✅ NOVO ENDPOINT: Excluir conta do usuário
     @DeleteMapping("/account")
     public ResponseEntity<?> deleteAccount(@RequestHeader("Authorization") String authHeader) {
         try {
@@ -130,12 +330,6 @@ public class UserController {
             }
 
             User user = userOpt.get();
-            
-            // Aqui você pode adicionar lógica adicional antes de excluir:
-            // - Verificar se há dados dependentes
-            // - Fazer backup dos dados
-            // - Notificar o usuário por email, etc.
-            
             userRepository.delete(user);
             
             return ResponseEntity.ok().body("Conta excluída com sucesso");
@@ -145,7 +339,7 @@ public class UserController {
         }
     }
 
-    // ✅ NOVO ENDPOINT: Exportar dados do usuário
+    // ✅ Exportar dados do usuário (mantido da versão anterior)
     @GetMapping("/export-data")
     public void exportUserData(HttpServletResponse response, @RequestHeader("Authorization") String authHeader) {
         try {
@@ -217,157 +411,18 @@ public class UserController {
                 PrintWriter writer = response.getWriter();
                 writer.write("Erro ao exportar dados: " + e.getMessage());
             } catch (IOException ioException) {
-                // Log do erro
                 System.err.println("Erro ao enviar resposta de erro: " + ioException.getMessage());
             }
-        }
-    }
-
-    // ✅ Atualizar perfil do usuário
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody UpdateUserRequest request, @RequestHeader("Authorization") String authHeader) {
-        try {
-            Optional<User> userOpt = userRepository.findById(id);
-            if (userOpt.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-
-            User user = userOpt.get();
-            
-            // Atualizar campos permitidos
-            if (request.getFullName() != null) {
-                user.setFullName(request.getFullName());
-            }
-            if (request.getBio() != null) {
-                user.setBio(request.getBio());
-            }
-            if (request.getLocation() != null) {
-                user.setLocation(request.getLocation());
-            }
-            // Campos específicos de médico
-            if ("DOCTOR".equals(user.getRole())) {
-                if (request.getExperienceYears() != null) {
-                    user.setExperienceYears(request.getExperienceYears());
-                }
-            }
-
-            User savedUser = userRepository.save(user);
-            return ResponseEntity.ok(savedUser);
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Erro ao atualizar usuário: " + e.getMessage());
-        }
-    }
-
-    // ✅ Upload de foto de perfil (Base64)
-    @PostMapping("/{id}/profile-image")
-    public ResponseEntity<?> uploadProfileImage(
-            @PathVariable Long id,
-            @RequestBody ProfileImageRequest request,
-            @RequestHeader("Authorization") String authHeader) {
-        try {
-            Optional<User> userOpt = userRepository.findById(id);
-            if (userOpt.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-
-            User user = userOpt.get();
-            
-            // Validar se é Base64
-            if (request.getImageData() != null && request.getImageData().startsWith("data:image")) {
-                user.setProfileImage(request.getImageData());
-                // Limpar URL se estiver usando Base64
-                user.setProfileImageUrl(null);
-            } else if (request.getImageUrl() != null) {
-                user.setProfileImageUrl(request.getImageUrl());
-                // Limpar Base64 se estiver usando URL
-                user.setProfileImage(null);
-            } else {
-                return ResponseEntity.badRequest().body("Dados de imagem inválidos");
-            }
-
-            User savedUser = userRepository.save(user);
-            return ResponseEntity.ok(savedUser);
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Erro ao atualizar foto de perfil: " + e.getMessage());
-        }
-    }
-
-    // ✅ Remover foto de perfil
-    @DeleteMapping("/{id}/profile-image")
-    public ResponseEntity<?> removeProfileImage(@PathVariable Long id, @RequestHeader("Authorization") String authHeader) {
-        try {
-            Optional<User> userOpt = userRepository.findById(id);
-            if (userOpt.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-
-            User user = userOpt.get();
-            user.setProfileImage(null);
-            user.setProfileImageUrl(null);
-
-            User savedUser = userRepository.save(user);
-            return ResponseEntity.ok(savedUser);
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Erro ao remover foto de perfil: " + e.getMessage());
-        }
-    }
-
-    // ✅ Upload de arquivo de imagem (Multipart)
-    @PostMapping("/{id}/profile-image-upload")
-    public ResponseEntity<?> uploadProfileImageFile(
-            @PathVariable Long id,
-            @RequestParam("file") MultipartFile file,
-            @RequestHeader("Authorization") String authHeader) {
-        try {
-            Optional<User> userOpt = userRepository.findById(id);
-            if (userOpt.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-
-            // Validar tipo de arquivo
-            if (!file.getContentType().startsWith("image/")) {
-                return ResponseEntity.badRequest().body("Apenas arquivos de imagem são permitidos");
-            }
-
-            // Validar tamanho (máximo 5MB)
-            if (file.getSize() > 5 * 1024 * 1024) {
-                return ResponseEntity.badRequest().body("A imagem deve ter no máximo 5MB");
-            }
-
-            User user = userOpt.get();
-            
-            // Converter para Base64
-            String base64Image = "data:" + file.getContentType() + ";base64," + 
-                Base64.getEncoder().encodeToString(file.getBytes());
-            
-            user.setProfileImage(base64Image);
-            user.setProfileImageUrl(null);
-
-            User savedUser = userRepository.save(user);
-            return ResponseEntity.ok(savedUser);
-
-        } catch (IOException e) {
-            return ResponseEntity.badRequest().body("Erro ao processar a imagem: " + e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Erro ao fazer upload da imagem: " + e.getMessage());
         }
     }
 }
 
 // ✅ CLASSES DE REQUEST
-
-class ProfileImageRequest {
-    private String imageData; // Base64
-    private String imageUrl;  // URL externa
+class ProfilePictureRequest {
+    private String profilePicture;
     
-    public String getImageData() { return imageData; }
-    public void setImageData(String imageData) { this.imageData = imageData; }
-    
-    public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public String getProfilePicture() { return profilePicture; }
+    public void setProfilePicture(String profilePicture) { this.profilePicture = profilePicture; }
 }
 
 class UpdateUserRequest {
@@ -375,8 +430,9 @@ class UpdateUserRequest {
     private String bio;
     private String location;
     private Integer experienceYears;
+    private String especializacao;
+    private String crm;
 
-    // Getters e Setters
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
     
@@ -388,9 +444,14 @@ class UpdateUserRequest {
     
     public Integer getExperienceYears() { return experienceYears; }
     public void setExperienceYears(Integer experienceYears) { this.experienceYears = experienceYears; }
+    
+    public String getEspecializacao() { return especializacao; }
+    public void setEspecializacao(String especializacao) { this.especializacao = especializacao; }
+    
+    public String getCrm() { return crm; }
+    public void setCrm(String crm) { this.crm = crm; }
 }
 
-// ✅ NOVA CLASSE: Request para configurações de privacidade
 class PrivacySettingsRequest {
     private String profileVisibility;
     private Boolean showOnlineStatus;
@@ -398,7 +459,6 @@ class PrivacySettingsRequest {
     private Boolean showActivity;
     private Boolean dataCollection;
 
-    // Getters e Setters
     public String getProfileVisibility() { return profileVisibility; }
     public void setProfileVisibility(String profileVisibility) { this.profileVisibility = profileVisibility; }
     

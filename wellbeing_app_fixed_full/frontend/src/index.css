@@ -8,3 +8,39 @@ body { @apply bg-gray-50 text-gray-900; font-family: ui-sans-serif, system-ui, -
 .app-container { max-width: 900px; margin: 0 auto; padding: 24px; }
 .card { @apply bg-white shadow rounded-lg p-6; }
 .header-title { @apply text-2xl font-semibold text-gray-800; }
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #6666C4 #2A2A44;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #2A2A44;
+  border-radius: 10px;
+  margin: 4px 0;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #6666C4, #5454F0);
+  border-radius: 10px;
+  border: 1px solid #2A2A44;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #5454F0, #6666C4);
+  transform: scale(1.1);
+  transition: all 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #4545D0, #5A5AB8);
+}
+
+/* Animações suaves para o scroll */
+.custom-scrollbar {
+  scroll-behavior: smooth;
+}

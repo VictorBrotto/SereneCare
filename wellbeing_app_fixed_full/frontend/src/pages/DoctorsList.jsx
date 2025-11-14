@@ -22,7 +22,7 @@ export default function DoctorsList() {
   const fetchDoctors = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:8080/api/users/doctors", { // ✅ CORRETO
+      const res = await axios.get("http://localhost:8080/api/users/doctors", {
         headers: { Authorization: `Bearer ${token}` }
       });
       setDoctors(res.data);
@@ -36,21 +36,55 @@ export default function DoctorsList() {
   const fetchSpecialties = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:8080/api/users/doctors/specializations", { // ✅ CORRETO
+      const res = await axios.get("http://localhost:8080/api/users/doctors/specializations", {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSpecialties(res.data);
     } catch (err) {
       console.error("Erro ao buscar especialidades", err);
-      // Fallback para especialidades padrão se o endpoint não existir
+      // Fallback para especialidades padrão
       setSpecialties(["Cardiologia", "Dermatologia", "Psiquiatria", "Pediatria", "Ortopedia"]);
     }
   };
 
+  // ✅ CORREÇÃO: Renderizar foto de perfil com fallback
+  const renderProfilePicture = (doctor, size = "w-16 h-16") => {
+    if (doctor.profilePicture) {
+      return (
+        <img 
+          src={doctor.profilePicture} 
+          alt={doctor.fullName}
+          className={`${size} rounded-full object-cover border border-[#34344A] flex-shrink-0`}
+          onError={(e) => {
+            e.target.style.display = 'none';
+            e.target.nextSibling.style.display = 'flex';
+          }}
+        />
+      );
+    }
+    
+    // Fallback para iniciais
+    const initials = doctor.fullName ? doctor.fullName.split(' ').map(n => n[0]).join('').toUpperCase() : "DR";
+    
+    return (
+      <motion.div 
+        className={`${size} bg-gradient-to-br from-[#6666C4] to-[#5454F0] rounded-full flex items-center justify-center text-white font-bold text-lg`}
+        whileHover={{ rotate: 5, scale: 1.1 }}
+        transition={{ type: "spring", stiffness: 300, damping: 10 }}
+      >
+        {initials.substring(0, 2)}
+      </motion.div>
+    );
+  };
+
   const filteredDoctors = doctors.filter(doctor =>
-    doctor.fullName.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    doctor.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) &&
     (selectedSpecialty === "" || doctor.especializacao === selectedSpecialty)
   );
+
+  const handleDoctorClick = (doctorId) => {
+    navigate(`/doctors/${doctorId}`);
+  };
 
   if (loading) {
     return (
@@ -89,7 +123,7 @@ export default function DoctorsList() {
           className="bg-[#29293E] rounded-2xl p-6 mb-8 border border-[#34344A]"
         >
           <div className="flex flex-col md:flex-row gap-4">
-            {/* Search Input com Animações */}
+            {/* Search Input */}
             <motion.div 
               className="flex-1 relative"
               whileHover={{ scale: 1.02 }}
@@ -107,26 +141,12 @@ export default function DoctorsList() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onFocus={() => setIsSearchFocused(true)}
                 onBlur={() => setIsSearchFocused(false)}
-                whileFocus={{ 
-                  scale: 1.02,
-                }}
+                whileFocus={{ scale: 1.02 }}
                 className="w-full pl-10 pr-4 py-3 bg-[#1F1F33] text-[#EAEAFB] rounded-xl border border-[#34344A] focus:border-[#6666C4] focus:ring-2 focus:ring-[#6666C4] outline-none transition-all duration-300"
               />
-              
-              {/* Efeito de brilho no focus */}
-              <AnimatePresence>
-                {isSearchFocused && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#6666C4]/10 to-[#5454F0]/10 -z-10"
-                  />
-                )}
-              </AnimatePresence>
             </motion.div>
             
-            {/* Select de Especialidades com Animações Corrigidas */}
+            {/* Select de Especialidades */}
             <motion.div 
               className="relative"
               whileHover={{ scale: 1.02 }}
@@ -137,71 +157,34 @@ export default function DoctorsList() {
                 onChange={(e) => setSelectedSpecialty(e.target.value)}
                 onFocus={() => setIsSelectFocused(true)}
                 onBlur={() => setIsSelectFocused(false)}
-                whileFocus={{ 
-                  scale: 1.02,
-                }}
+                whileFocus={{ scale: 1.02 }}
                 className="w-full md:w-64 pl-4 pr-10 py-3 bg-[#1F1F33] text-[#EAEAFB] rounded-xl border border-[#34344A] focus:border-[#6666C4] focus:ring-2 focus:ring-[#6666C4] outline-none appearance-none cursor-pointer transition-all duration-300"
               >
                 <option value="">Todas as especialidades</option>
-                {specialties.map((specialty, index) => (
+                {specialties.map((specialty) => (
                   <option key={specialty} value={specialty}>
                     {specialty}
                   </option>
                 ))}
               </motion.select>
               
-              {/* Seta com animação corrigida */}
               <ChevronDownIcon 
                 className={`w-4 h-4 absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none transition-transform duration-300 ${
                   isSelectFocused ? "rotate-180 text-[#6666C4]" : "rotate-0 text-[#A5A5D6]"
                 }`} 
               />
-
-              {/* Efeito de brilho no focus */}
-              <AnimatePresence>
-                {isSelectFocused && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#6666C4]/10 to-[#5454F0]/10 -z-10"
-                  />
-                )}
-              </AnimatePresence>
             </motion.div>
           </div>
-
-          {/* Contador de resultados */}
-          <AnimatePresence>
-            {filteredDoctors.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                transition={{ duration: 0.3 }}
-                className="mt-4 flex items-center gap-2"
-              >
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="w-2 h-2 bg-[#6666C4] rounded-full"
-                />
-                <span className="text-sm text-[#A5A5D6]">
-                  {filteredDoctors.length} {filteredDoctors.length === 1 ? 'doutor encontrado' : 'doutores encontrados'}
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </motion.div>
 
-        {/* Lista de Doutores */}
+        {/* ✅ CORREÇÃO: Lista de Doutores com AnimatePresence mode="popLayout" */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="popLayout">
             {filteredDoctors.map((doctor, index) => (
               <motion.div
                 key={doctor.id}
@@ -222,23 +205,15 @@ export default function DoctorsList() {
                 }}
                 whileTap={{ scale: 0.98 }}
                 className="bg-[#29293E] rounded-2xl p-6 border border-[#34344A] hover:border-[#6666C4] transition-all duration-300 cursor-pointer group relative overflow-hidden"
-                onClick={() => navigate(`/doctors/${doctor.id}`)}
+                onClick={() => handleDoctorClick(doctor.id)}
               >
-                {/* Efeito de brilho no hover */}
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-br from-[#6666C4]/5 to-[#5454F0]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  whileHover={{ opacity: 1 }}
-                />
-
                 {/* Header do Card */}
                 <div className="flex items-start gap-4 mb-4 relative z-10">
-                  <motion.div 
-                    className="w-16 h-16 bg-gradient-to-br from-[#6666C4] to-[#5454F0] rounded-full flex items-center justify-center text-white font-bold text-lg"
-                    whileHover={{ rotate: 5, scale: 1.1 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 10 }}
-                  >
-                    {doctor.fullName.split(' ').map(n => n[0]).join('')}
-                  </motion.div>
+                  {/* ✅ FOTO DE PERFIL */}
+                  <div className="relative">
+                    {renderProfilePicture(doctor)}
+                  </div>
+                  
                   <div className="flex-1">
                     <motion.h3 
                       className="text-lg font-semibold text-[#EAEAFB] group-hover:text-white transition-colors"
@@ -303,12 +278,13 @@ export default function DoctorsList() {
 
                 {/* Botão */}
                 <motion.button
-                  whileHover={{ 
-                    scale: 1.05,
-                    background: "linear-gradient(135deg, #5454F0 0%, #6666C4 100%)"
-                  }}
+                  whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="w-full bg-gradient-to-r from-[#6666C4] to-[#5454F0] text-white py-2 rounded-xl font-semibold transition-all duration-300 relative z-10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDoctorClick(doctor.id);
+                  }}
                 >
                   Ver Perfil
                 </motion.button>
@@ -339,7 +315,6 @@ export default function DoctorsList() {
   );
 }
 
-// Componente UserGroupIcon para o estado vazio
 const UserGroupIcon = ({ className }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
